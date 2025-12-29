@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+<BorderPane xmlns="http://javafx.com/javafx/21.0.2" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.baccalaureat.controller.GameController">
+    <top>
+        <HBox spacing="20" alignment="CENTER_LEFT" BorderPane.alignment="CENTER">
+            <padding>
+                <Insets topRightBottomLeft="10" />
+            </padding>
+            <Label fx:id="letterLabel" text="?" style="-fx-font-size: 28px; -fx-font-weight: bold;" />
+            <Label text="Lettre" />
+            <Pane HBox.hgrow="ALWAYS" />
+            <Label text="Timer:" />
+            <Label fx:id="timerLabel" text="01:00" style="-fx-font-size: 18px; -fx-font-weight: bold;" />
+        </HBox>
+    </top>
+    <center>
+        <GridPane fx:id="inputGrid" hgap="10" vgap="8" BorderPane.alignment="CENTER">
+            <padding>
+                <Insets topRightBottomLeft="20" />
+            </padding>
+        </GridPane>
+    </center>
+    <bottom>
+        <HBox spacing="10" alignment="CENTER_RIGHT" BorderPane.alignment="CENTER">
+            <padding>
+                <Insets topRightBottomLeft="10" />
+            </padding>
+            <Pane HBox.hgrow="ALWAYS" />
+            <Button fx:id="stopButton" text="Stop &amp; Validate" onAction="#handleStopAndValidate" />
+        </HBox>
+    </bottom>
+</BorderPane>
