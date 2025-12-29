@@ -123,6 +123,6 @@ public class GameController {
             seconds = 0;
         int m = seconds / 60;
         int s = seconds % 60;
-        return String.format("%02d:%02d", m, s);
+        return "%02d:%02d".formatted(m, s);
     }
 }

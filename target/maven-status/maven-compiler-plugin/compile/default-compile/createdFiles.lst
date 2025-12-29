@@ -1,0 +1,9 @@
+com\baccalaureat\controller\MainMenuController.class
+com\baccalaureat\service\ValidationService.class
+com\baccalaureat\dao\DatabaseManager.class
+com\baccalaureat\controller\GameController.class
+com\baccalaureat\dao\WordDAO.class
+com\baccalaureat\App.class
+com\baccalaureat\model\Category.class
+com\baccalaureat\model\Category$1.class
+com\baccalaureat\model\GameSession.class
