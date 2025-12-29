@@ -10,7 +10,7 @@ A modernized Scattergories-like desktop game built with Java 17, JavaFX, and SQL
 ## Run
 ```powershell
 # From the project root
-mvn -q javafx:run
+ mvn javafx:run
 ```
 
 If you see JavaFX module errors, ensure JAVA_HOME points to JDK 17+ and that Maven uses the same JDK.
