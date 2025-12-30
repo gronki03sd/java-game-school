@@ -1,0 +1,38 @@
+/* DARK MODE THEME */
+.root {
+    -fx-background-color: #19183B;
+}
+.main-menu, .game-container, .lobby-container {
+    -fx-background-color: #19183B;
+}
+.menu-button, .action-button, .add-player-button {
+    -fx-background-color: #E7F2EF;
+    -fx-text-fill: #19183B;
+}
+.menu-button:hover, .action-button:hover, .add-player-button:hover {
+    -fx-background-color: #A1C2BD;
+    -fx-text-fill: #19183B;
+}
+.secondary-button, .back-button, .remove-player-button {
+    -fx-background-color: #708993;
+    -fx-text-fill: #E7F2EF;
+}
+.secondary-button:hover, .back-button:hover, .remove-player-button:hover {
+    -fx-background-color: #A1C2BD;
+    -fx-text-fill: #19183B;
+}
+.info-card, .player-card, .category-card {
+    -fx-background-color: #708993;
+    -fx-text-fill: #E7F2EF;
+}
+.difficulty-button {
+    -fx-background-color: #A1C2BD;
+    -fx-text-fill: #19183B;
+}
+.difficulty-button-selected {
+    -fx-background-color: #E7F2EF;
+    -fx-text-fill: #19183B;
+}
+.letter-display, .score-display, .player-score {
+    -fx-text-fill: #E7F2EF;
+}

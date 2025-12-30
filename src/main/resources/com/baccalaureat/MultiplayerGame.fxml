@@ -5,7 +5,7 @@
 <?import javafx.scene.effect.DropShadow?>
 
 <BorderPane xmlns="http://javafx.com/javafx/21.0.2" xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.baccalaureat.controller.GameController"
+            fx:controller="com.baccalaureat.controller.MultiplayerGameController"
             styleClass="game-container" stylesheets="@styles.css">
     
     <!-- Header -->
@@ -16,15 +16,17 @@
                     <Insets top="15" right="25" bottom="15" left="25"/>
                 </padding>
                 
-                <!-- Back Button -->
-                <Button fx:id="backButton" text="← Retour" styleClass="back-button" 
-                        onAction="#handleBackToMenu"/>
+                <!-- Current Player -->
+                <VBox alignment="CENTER" spacing="2">
+                    <Label text="JOUEUR" styleClass="info-label"/>
+                    <Label fx:id="currentPlayerLabel" text="Player 1" styleClass="player-name"/>
+                </VBox>
                 
                 <!-- Letter Display -->
                 <VBox alignment="CENTER" spacing="2">
                     <Label fx:id="letterLabel" text="?" styleClass="letter-display">
                         <effect>
-                            <DropShadow color="rgba(78, 204, 163, 0.5)" radius="15"/>
+                            <DropShadow color="rgba(78, 204, 163, 0.4)" radius="15"/>
                         </effect>
                     </Label>
                     <Label text="LETTRE" styleClass="letter-label"/>
@@ -36,12 +38,6 @@
                 <VBox alignment="CENTER" styleClass="info-card" spacing="2">
                     <Label text="MANCHE" styleClass="info-label"/>
                     <Label fx:id="roundLabel" text="1/5" styleClass="info-value"/>
-                </VBox>
-                
-                <!-- Score Display -->
-                <VBox alignment="CENTER" styleClass="info-card" spacing="2">
-                    <Label text="SCORE" styleClass="info-label"/>
-                    <Label fx:id="scoreLabel" text="0" styleClass="score-display"/>
                 </VBox>
                 
                 <!-- Timer -->
@@ -64,31 +60,30 @@
                 <padding>
                     <Insets top="25" right="40" bottom="25" left="40"/>
                 </padding>
-                <!-- Categories will be added dynamically -->
             </VBox>
         </ScrollPane>
     </center>
     
-    <!-- Bottom Actions -->
+    <!-- Bottom: Player Scores + Actions -->
     <bottom>
-        <HBox spacing="15" alignment="CENTER" styleClass="header-bar">
-            <padding>
-                <Insets top="15" right="25" bottom="15" left="25"/>
-            </padding>
+        <VBox spacing="10">
+            <!-- Player Scores Bar -->
+            <HBox fx:id="scoresBar" spacing="15" alignment="CENTER" 
+                  style="-fx-background-color: rgba(0, 0, 0, 0.03); -fx-padding: 15; -fx-border-color: #e8ecef; -fx-border-width: 1 0 0 0;">
+            </HBox>
             
-            <!-- Hint Button -->
-            <Button fx:id="hintButton" text="💡 Indice" styleClass="secondary-button"
-                    onAction="#handleHint"/>
-            
-            <Pane HBox.hgrow="ALWAYS"/>
-            
-            <!-- Skip Button -->
-            <Button fx:id="skipButton" text="⏭ Passer" styleClass="secondary-button"
-                    onAction="#handleSkipRound"/>
-            
-            <!-- Validate Button -->
-            <Button fx:id="stopButton" text="✓ Valider les réponses" styleClass="action-button"
-                    onAction="#handleStopAndValidate"/>
-        </HBox>
+            <!-- Actions -->
+            <HBox spacing="15" alignment="CENTER" styleClass="header-bar">
+                <padding>
+                    <Insets top="15" right="25" bottom="15" left="25"/>
+                </padding>
+                
+                <Pane HBox.hgrow="ALWAYS"/>
+                
+                <!-- Validate Button -->
+                <Button fx:id="validateButton" text="✓ Valider mes réponses" styleClass="action-button"
+                        onAction="#handleValidate"/>
+            </HBox>
+        </VBox>
     </bottom>
 </BorderPane>

@@ -1,18 +1,83 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
-<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Font?>
+<?import javafx.scene.effect.DropShadow?>
+
 <VBox xmlns="http://javafx.com/javafx/21.0.2" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.baccalaureat.controller.MainMenuController"
-      spacing="20" alignment="CENTER" stylesheets="">
+      spacing="25" alignment="CENTER" styleClass="main-menu"
+    stylesheets="@styles.css">
+    
     <padding>
-        <Insets topRightBottomLeft="30" />
+        <Insets top="50" right="50" bottom="50" left="50"/>
     </padding>
-    <Label text="Baccalauréat+" >
-        <font>
-            <Font size="32" />
-        </font>
-    </Label>
-    <Button fx:id="startSoloButton" text="Start Solo Game" onAction="#handleStartSolo" prefWidth="200" />
+    
+    <!-- Game Logo/Title -->
+    <VBox alignment="CENTER" spacing="5">
+        <Label text="🎯" style="-fx-font-size: 72px;">
+            <effect>
+                <DropShadow color="rgba(78, 204, 163, 0.4)" radius="20"/>
+            </effect>
+        </Label>
+        <Label text="Baccalauréat+" styleClass="game-title"/>
+        <Label text="Le jeu de mots ultime" styleClass="subtitle"/>
+    </VBox>
+    
+    <!-- Spacer -->
+    <Region VBox.vgrow="ALWAYS" maxHeight="50"/>
+    
+    <!-- Game Stats Preview -->
+    <HBox spacing="30" alignment="CENTER">
+        <VBox alignment="CENTER" styleClass="info-card" spacing="5">
+            <Label text="🏆" style="-fx-font-size: 24px;"/>
+            <Label text="Meilleur Score" styleClass="info-label"/>
+            <Label fx:id="highScoreLabel" text="0" styleClass="info-value"/>
+        </VBox>
+        <VBox alignment="CENTER" styleClass="info-card" spacing="5">
+            <Label text="🎮" style="-fx-font-size: 24px;"/>
+            <Label text="Parties Jouées" styleClass="info-label"/>
+            <Label fx:id="gamesPlayedLabel" text="0" styleClass="info-value"/>
+        </VBox>
+        <VBox alignment="CENTER" styleClass="info-card" spacing="5">
+            <Label text="📊" style="-fx-font-size: 24px;"/>
+            <Label text="Catégories" styleClass="info-label"/>
+            <Label text="8" styleClass="info-value"/>
+        </VBox>
+    </HBox>
+    
+    <!-- Spacer -->
+    <Region VBox.vgrow="ALWAYS" maxHeight="30"/>
+    
+    <!-- Difficulty Selection -->
+    <VBox alignment="CENTER" spacing="10">
+        <Label text="Difficulté" styleClass="section-title"/>
+        <HBox spacing="10" alignment="CENTER">
+            <ToggleButton fx:id="easyBtn" text="🌱 Facile" styleClass="difficulty-button" 
+                         onAction="#handleDifficultyChange" userData="EASY"/>
+            <ToggleButton fx:id="mediumBtn" text="⚡ Normal" styleClass="difficulty-button" 
+                         onAction="#handleDifficultyChange" userData="MEDIUM"/>
+            <ToggleButton fx:id="hardBtn" text="🔥 Difficile" styleClass="difficulty-button" 
+                         onAction="#handleDifficultyChange" userData="HARD"/>
+        </HBox>
+    </VBox>
+    
+        <!-- Main Actions -->
+        <VBox spacing="15" alignment="CENTER">
+        <Button fx:id="startSoloButton" text="👤  Mode Solo" 
+            onAction="#handleStartSolo" styleClass="menu-button" prefWidth="280"/>
+        <Button fx:id="startMultiplayerButton" text="👥  Mode Multijoueur" 
+            onAction="#handleStartMultiplayer" styleClass="multiplayer-button" prefWidth="280"/>
+        <Button fx:id="howToPlayButton" text="📖  Comment Jouer" 
+            onAction="#handleHowToPlay" styleClass="secondary-button" prefWidth="280"/>
+        <Button fx:id="themeToggleButton" text="🌙 Mode Sombre" onAction="#handleThemeToggle" styleClass="secondary-button" prefWidth="180"/>
+        </VBox>
+    
+    <!-- Spacer -->
+    <Region VBox.vgrow="ALWAYS"/>
+    
+    <!-- Footer -->
+    <Label text="Version 2.0 • Créé avec ❤️ en JavaFX" 
+           style="-fx-text-fill: #888; -fx-font-size: 11px;"/>
 </VBox>

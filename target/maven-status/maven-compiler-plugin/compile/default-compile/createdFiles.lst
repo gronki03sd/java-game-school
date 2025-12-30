@@ -1,9 +1,14 @@
+com\baccalaureat\controller\MultiplayerLobbyController$1.class
+com\baccalaureat\model\Player.class
+com\baccalaureat\controller\MultiplayerLobbyController.class
 com\baccalaureat\controller\MainMenuController.class
+com\baccalaureat\controller\MainMenuController$1.class
 com\baccalaureat\service\ValidationService.class
-com\baccalaureat\dao\DatabaseManager.class
-com\baccalaureat\controller\GameController.class
 com\baccalaureat\dao\WordDAO.class
 com\baccalaureat\App.class
 com\baccalaureat\model\Category.class
-com\baccalaureat\model\Category$1.class
 com\baccalaureat\model\GameSession.class
+com\baccalaureat\controller\MultiplayerGameController.class
+com\baccalaureat\dao\DatabaseManager.class
+com\baccalaureat\model\GameSession$Difficulty.class
+com\baccalaureat\controller\GameController.class
