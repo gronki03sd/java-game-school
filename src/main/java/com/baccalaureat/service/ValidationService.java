@@ -14,6 +14,7 @@ import com.baccalaureat.model.ValidationStatus;
 public class ValidationService {
     private final WordDAO wordDAO = new WordDAO();
     private final CategorizationEngine categorizationEngine = new CategorizationEngine();
+    private final CacheService cacheService = new CacheService();
     
     /**
      * Validates a word for a category using the AI-ready validation pipeline.
@@ -52,9 +53,14 @@ public class ValidationService {
         // Step 3: Delegate to categorization engine
         ValidationResult result = categorizationEngine.validate(normalizedWord, categoryEnum);
         
-        // Step 4: Cache positive results (only deterministic valid results)
-        if (result.isValid() && result.getConfidence() == 1.0) {
-            wordDAO.saveWord(normalizedCategory, normalizedWord);
+        // Step 4: Cache valid results for future instant lookup
+        if (result.isValid()) {
+            // Save to legacy cache (backward compatibility)
+            if (result.getConfidence() == 1.0) {
+                wordDAO.saveWord(normalizedCategory, normalizedWord);
+            }
+            // Save to new cache system
+            cacheService.saveValidatedWord(normalizedWord, categoryEnum);
         }
         
         return result;

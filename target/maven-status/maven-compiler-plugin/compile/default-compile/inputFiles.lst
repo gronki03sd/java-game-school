@@ -1,6 +1,7 @@
 D:\java-game-school\src\main\java\com\baccalaureat\ai\CategorizationEngine.java
 D:\java-game-school\src\main\java\com\baccalaureat\ai\CategoryValidator.java
 D:\java-game-school\src\main\java\com\baccalaureat\ai\FixedListValidator.java
+D:\java-game-school\src\main\java\com\baccalaureat\ai\LocalCacheValidator.java
 D:\java-game-school\src\main\java\com\baccalaureat\ai\MockApiTest.java
 D:\java-game-school\src\main\java\com\baccalaureat\ai\SemanticAiValidator.java
 D:\java-game-school\src\main\java\com\baccalaureat\ai\SemanticAnchorConfig.java
@@ -19,7 +20,9 @@ D:\java-game-school\src\main\java\com\baccalaureat\model\Player.java
 D:\java-game-school\src\main\java\com\baccalaureat\model\ValidationResult.java
 D:\java-game-school\src\main\java\com\baccalaureat\model\ValidationStatus.java
 D:\java-game-school\src\main\java\com\baccalaureat\model\WordEntry.java
+D:\java-game-school\src\main\java\com\baccalaureat\service\CacheService.java
 D:\java-game-school\src\main\java\com\baccalaureat\service\HttpClientService.java
 D:\java-game-school\src\main\java\com\baccalaureat\service\ValidationService.java
 D:\java-game-school\src\main\java\com\baccalaureat\test\BackendTestRunner.java
+D:\java-game-school\src\main\java\com\baccalaureat\test\LocalCacheValidationTest.java
 D:\java-game-school\src\main\java\com\baccalaureat\test\ValidationServiceTest.java

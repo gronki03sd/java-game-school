@@ -22,9 +22,10 @@ public class CategorizationEngine {
     
     public CategorizationEngine() {
         validators = new ArrayList<>();
-        validators.add(new FixedListValidator());
-        validators.add(new WebConfigurableValidator());  // Replaced ApiCategoryValidator
-        validators.add(new SemanticAiValidator());
+        validators.add(new LocalCacheValidator());       // STEP 1: Local database cache
+        validators.add(new FixedListValidator());        // STEP 2: Deterministic validation
+        validators.add(new WebConfigurableValidator());  // STEP 3: Web API validation
+        validators.add(new SemanticAiValidator());       // STEP 4: AI validation (future)
     }
     
     /**
