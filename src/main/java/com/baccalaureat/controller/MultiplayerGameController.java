@@ -11,6 +11,7 @@ import java.util.Random;
 import com.baccalaureat.model.Category;
 import com.baccalaureat.model.GameSession;
 import com.baccalaureat.model.Player;
+import com.baccalaureat.model.ValidationResult;
 import com.baccalaureat.service.ValidationService;
 
 import javafx.animation.KeyFrame;
@@ -323,9 +324,18 @@ public class MultiplayerGameController {
             current.setAnswer(c, word);
 
             boolean startsCorrect = !word.isEmpty() && word.substring(0, 1).equalsIgnoreCase(currentLetter);
-            boolean valid = startsCorrect && validationService.validateWord(c.name(), word);
+            
+            if (!startsCorrect) {
+                status.setText("❌");
+                status.setStyle("-fx-text-fill: #ff6b6b; -fx-font-size: 24px;");
+                tf.setDisable(true);
+                continue;
+            }
 
-            if (valid) {
+            // Delegate validation to service layer
+            ValidationResult result = validationService.validateWord(c.name(), word);
+            
+            if (result.isValid()) {
                 status.setText("✅");
                 status.setStyle("-fx-text-fill: #4ecca3; -fx-font-size: 24px;");
                 points += 2;

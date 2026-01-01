@@ -2,13 +2,17 @@ package com.baccalaureat.controller;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
+import com.baccalaureat.ai.CategorizationEngine;
 import com.baccalaureat.model.Category;
 import com.baccalaureat.model.GameSession;
+import com.baccalaureat.model.ValidationResult;
+import com.baccalaureat.model.ValidationStatus;
 import com.baccalaureat.service.ValidationService;
-
 import javafx.animation.KeyFrame;
 import javafx.animation.ScaleTransition;
 import javafx.animation.Timeline;
@@ -31,6 +35,32 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
+/**
+ * GameController manages the Baccalauréat game UI and integrates with the backend validation pipeline.
+ * 
+ * KEY CHANGE: This controller now uses BACKEND VALIDATION instead of simple first-letter checks.
+ * The old approach only validated that words started with the correct letter, which allowed
+ * nonsense words to be highlighted as valid. Now every word is validated through the 
+ * ValidationService which coordinates the complete validation pipeline.
+ * 
+ * VALIDATION PIPELINE:
+ * 1. First letter check (preliminary filter)
+ * 2. Duplicate detection within round
+ * 3. Backend validation via ValidationService.validateWord()
+ *    - Database cache lookup for performance
+ *    - FixedListValidator: Deterministic validation with French word lists
+ *    - WebConfigurableValidator: Web-based validation via DictionaryAPI.dev
+ *    - SemanticAiValidator: Future AI-based validation (placeholder)
+ * 
+ * UI FEEDBACK BASED ON ValidationResult:
+ * - VALID words: Green highlighting, confidence % shown
+ * - INVALID words: Red highlighting, error reason shown
+ * - UNCERTAIN results: Orange highlighting (API unavailable, low confidence)
+ * - Low-confidence valid (<85%): Orange highlighting to indicate uncertainty
+ * 
+ * The UI now strictly follows backend validation results instead of misleading
+ * orange highlights based on first-letter matches.
+ */
 public class GameController {
     private boolean darkMode = false;
     @FXML private Label letterLabel;
@@ -44,11 +74,16 @@ public class GameController {
     @FXML private Button skipButton;
     @FXML private ProgressBar timerProgress;
 
+    // Backend validation service - coordinates full validation pipeline with caching
     private final ValidationService validationService = new ValidationService();
+    private final CategorizationEngine categorizationEngine = new CategorizationEngine();
     private GameSession session;
     private final Map<Category, TextField> inputFields = new HashMap<>();
     private final Map<Category, Label> statusLabels = new HashMap<>();
+    private final Map<Category, Label> confidenceLabels = new HashMap<>();
     private final Map<Category, HBox> categoryCards = new HashMap<>();
+    private final Map<Category, ValidationResult> cachedResults = new HashMap<>();
+    private final Set<String> usedWordsThisRound = new HashSet<>();
 
     private Timeline countdown;
     private int remainingSeconds;
@@ -94,7 +129,10 @@ public class GameController {
         categoriesContainer.getChildren().clear();
         inputFields.clear();
         statusLabels.clear();
+        confidenceLabels.clear();
         categoryCards.clear();
+        cachedResults.clear();
+        usedWordsThisRound.clear();
 
         // Build category cards
         for (Category c : session.getCategories()) {
@@ -134,21 +172,12 @@ public class GameController {
         TextField tf = new TextField();
         tf.setPromptText("Mot en " + session.getCurrentLetter() + "...");
         tf.getStyleClass().add("category-input");
-        tf.setPrefWidth(250);
+        tf.setPrefWidth(200); // Reduced to make room for confidence display
         HBox.setHgrow(tf, Priority.ALWAYS);
 
-        // Real-time validation indicator
+        // Real-time backend validation (replaces simple letter check)
         tf.textProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal != null && !newVal.isEmpty()) {
-                boolean startsCorrect = newVal.toUpperCase().startsWith(session.getCurrentLetter());
-                if (startsCorrect) {
-                    tf.setStyle("-fx-border-color: #4ecca3; -fx-border-width: 2; -fx-border-radius: 10;");
-                } else {
-                    tf.setStyle("-fx-border-color: #ff6b6b; -fx-border-width: 2; -fx-border-radius: 10;");
-                }
-            } else {
-                tf.setStyle("");
-            }
+            validateWordRealTime(tf, category, newVal);
         });
 
         inputFields.put(category, tf);
@@ -156,11 +185,24 @@ public class GameController {
         // Status label
         Label status = new Label("⏳");
         status.getStyleClass().add("status-pending");
-        status.setMinWidth(40);
+        status.setMinWidth(30);
         status.setAlignment(Pos.CENTER);
         statusLabels.put(category, status);
+        
+        // Confidence and source display
+        Label confidenceLabel = new Label("");
+        confidenceLabel.getStyleClass().add("confidence-label");
+        confidenceLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #666;");
+        confidenceLabel.setMinWidth(80);
+        confidenceLabel.setAlignment(Pos.CENTER);
+        confidenceLabels.put(category, confidenceLabel);
+        
+        // Vertical box for status and confidence
+        VBox statusBox = new VBox(2);
+        statusBox.setAlignment(Pos.CENTER);
+        statusBox.getChildren().addAll(status, confidenceLabel);
 
-        card.getChildren().addAll(iconLabel, infoBox, tf, status);
+        card.getChildren().addAll(iconLabel, infoBox, tf, statusBox);
         return card;
     }
 
@@ -273,33 +315,37 @@ public class GameController {
         }
     }
 
+    /**
+     * Final validation when time runs out or user clicks "Validate".
+     * Uses cached results from real-time validation to avoid re-computation.
+     * Awards points based on backend validation results, not just letter matching.
+     */
     private void validateAll() {
         int points = 0;
-        String requiredStart = session.getCurrentLetter();
 
         for (Category c : session.getCategories()) {
             TextField tf = inputFields.get(c);
             String word = tf.getText() != null ? tf.getText().trim() : "";
             Label status = statusLabels.get(c);
+            Label confidenceLabel = confidenceLabels.get(c);
             HBox card = categoryCards.get(c);
 
-            boolean startsCorrect = !word.isEmpty() && word.substring(0, 1).equalsIgnoreCase(requiredStart);
-            boolean valid = startsCorrect && validationService.validateWord(c.name(), word);
-
-            if (valid) {
-                status.setText("✅");
-                status.getStyleClass().removeAll("status-pending", "status-invalid");
-                status.getStyleClass().add("status-valid");
-                card.setStyle("-fx-border-color: #4ecca3; -fx-border-width: 2; -fx-border-radius: 15;");
-                points += 2;
-
-                // Success animation
+            // Use cached validation result if available, otherwise validate now
+            ValidationResult result = cachedResults.get(c);
+            if (result == null) {
+                // Fallback validation (shouldn't happen with real-time validation)
+                result = validateWordComplete(word, c);
+            }
+            
+            // Apply final validation result with enhanced UI feedback
+            applyValidationResult(result, status, confidenceLabel, card);
+            
+            // Award points based on backend validation, not simple letter checks
+            if (result.isValid()) {
+                points += calculatePoints(result);
                 animateSuccess(card);
-            } else {
-                status.setText("❌");
-                status.getStyleClass().removeAll("status-pending", "status-valid");
-                status.getStyleClass().add("status-invalid");
-                card.setStyle("-fx-border-color: #ff6b6b; -fx-border-width: 2; -fx-border-radius: 15;");
+            } else if (result.isUncertain()) {
+                points += 1; // Partial credit for uncertain results (API unavailable, etc.)
             }
 
             tf.setDisable(true);
@@ -311,10 +357,214 @@ public class GameController {
         hintButton.setDisable(true);
         skipButton.setDisable(true);
 
-        // Show results after a short delay
+        // Show results after a short delay using Platform.runLater to avoid threading issues
         final int finalPoints = points;
-        Timeline delay = new Timeline(new KeyFrame(Duration.seconds(1.5), e -> showRoundResults(finalPoints)));
+        Timeline delay = new Timeline(new KeyFrame(Duration.seconds(1.5), e -> 
+            javafx.application.Platform.runLater(() -> showRoundResults(finalPoints))));
         delay.play();
+    }
+    
+    /**
+     * Real-time validation method called whenever user types in input field.
+     * 
+     * KEY IMPROVEMENT: This method provides IMMEDIATE backend validation feedback
+     * as users type, replacing the misleading "orange for correct letter" behavior.
+     * 
+     * OLD BEHAVIOR:
+     * - User types "asdfjkl" starting with "A"
+     * - UI shows orange highlight (misleading - suggests word might be valid)
+     * - Only at submit time would they discover it's nonsense
+     * 
+     * NEW BEHAVIOR:
+     * - User types "asdfjkl" starting with "A"
+     * - Backend validation runs immediately
+     * - UI shows red highlight with reason "Word not found in knowledge base"
+     * - User gets immediate, honest feedback
+     * 
+     * This creates a much better user experience with truthful, instant validation.
+     */
+    private void validateWordRealTime(TextField textField, Category category, String newValue) {
+        Label status = statusLabels.get(category);
+        Label confidenceLabel = confidenceLabels.get(category);
+        HBox card = categoryCards.get(category);
+        
+        if (newValue == null || newValue.trim().isEmpty()) {
+            // Empty input - reset to pending state
+            status.setText("⏳");
+            status.getStyleClass().removeAll("status-valid", "status-invalid", "status-uncertain");
+            status.getStyleClass().add("status-pending");
+            confidenceLabel.setText("");
+            textField.setStyle("");
+            cachedResults.remove(category);
+            return;
+        }
+        
+        // Perform complete validation using backend pipeline
+        ValidationResult result = validateWordComplete(newValue.trim(), category);
+        
+        // Cache the result for final validation
+        cachedResults.put(category, result);
+        
+        // Apply visual feedback
+        applyValidationResult(result, status, confidenceLabel, card);
+    }
+    
+    /**
+     * Complete word validation using the sophisticated backend pipeline.
+     * 
+     * This method represents the CORE IMPROVEMENT over the old system:
+     * OLD: Only checked if word started with correct letter → orange highlight
+     * NEW: Full category-aware validation via ValidationService → accurate green/orange/red feedback
+     * 
+     * VALIDATION STAGES:
+     * 1. Basic validation (empty, null)
+     * 2. First letter check (preliminary filter, not final validation)
+     * 3. Duplicate detection within current round
+     * 4. **BACKEND VALIDATION** via ValidationService.validateWord():
+     *    - Database cache lookup for performance
+     *    - FixedListValidator: Fast lookup in French word lists
+     *    - WebConfigurableValidator: Web API validation via DictionaryAPI.dev
+     *    - SemanticAiValidator: Future AI validation (placeholder)
+     * 
+     * The ValidationService ensures consistent validation logic across the application
+     * and provides caching for performance. It determines if a word actually belongs 
+     * to the requested category, not just whether it exists or starts correctly.
+     * 
+     * EXAMPLES:
+     * - "chien" in ANIMAL → VALID (found in fixed list)
+     * - "dog" in ANIMAL → VALID (DictionaryAPI confirms animal category)
+     * - "dog" in FRUIT → INVALID (DictionaryAPI knows it's not a fruit)
+     * - "zzxqp" in ANIMAL → INVALID (not found anywhere)
+     */
+    private ValidationResult validateWordComplete(String word, Category category) {
+        // Step 1: Basic input validation
+        if (word == null || word.trim().isEmpty()) {
+            return new ValidationResult(ValidationStatus.INVALID, 0.0, "UI", "Empty word");
+        }
+        
+        String normalizedWord = word.trim().toLowerCase();
+        String requiredStart = session.getCurrentLetter().toLowerCase();
+        
+        // Step 2: First letter check (preliminary filter, not final validation)
+        if (!normalizedWord.startsWith(requiredStart)) {
+            return new ValidationResult(ValidationStatus.INVALID, 0.0, "UI", 
+                "Word must start with '" + session.getCurrentLetter() + "'");
+        }
+        
+        // Step 3: Duplicate check within current round
+        if (usedWordsThisRound.contains(normalizedWord)) {
+            return new ValidationResult(ValidationStatus.INVALID, 0.0, "UI", "Duplicate word in this round");
+        }
+        
+        // Step 4: BACKEND VALIDATION via ValidationService - The key improvement!
+        // ValidationService coordinates the full validation pipeline with caching
+        // This replaces the old "orange if starts with letter" logic with
+        // sophisticated category-aware validation
+        ValidationResult backendResult = validationService.validateWord(category.name(), word);
+        
+        // Step 5: Track valid words to prevent duplicates in future inputs
+        if (backendResult.isValid()) {
+            usedWordsThisRound.add(normalizedWord);
+        }
+        
+        return backendResult;
+    }
+    
+    /**
+     * Applies validation result to UI elements with enhanced feedback.
+     * 
+     * This method replaces the old orange-for-correct-letter approach with
+     * sophisticated backend-driven visual feedback:
+     * 
+     * - GREEN: Valid words with high confidence (>=85%)
+     * - ORANGE: Valid words with low confidence (<85%) OR uncertain status
+     * - RED: Invalid words or validation errors
+     * 
+     * The confidence percentage and validation source are displayed to help
+     * users understand why their word was accepted/rejected.
+     */
+    private void applyValidationResult(ValidationResult result, Label status, Label confidenceLabel, HBox card) {
+        // Determine if this is a low-confidence valid result
+        boolean isLowConfidenceValid = result.isValid() && result.getConfidence() < 0.85;
+        
+        // Update status icon with more nuanced feedback
+        String statusIcon = switch (result.getStatus()) {
+            case VALID -> isLowConfidenceValid ? "⚠️" : "✅";  // Warning for low confidence
+            case INVALID -> "❌"; 
+            case UNCERTAIN -> "❓";
+            case ERROR -> "⚠️";
+        };
+        status.setText(statusIcon);
+        
+        // Update CSS classes with low-confidence handling
+        status.getStyleClass().removeAll("status-pending", "status-valid", "status-invalid", "status-uncertain");
+        String cssClass;
+        if (result.isValid() && !isLowConfidenceValid) {
+            cssClass = "status-valid";
+        } else if (result.isValid() && isLowConfidenceValid || result.isUncertain()) {
+            cssClass = "status-uncertain";  // Orange for low confidence valid or uncertain
+        } else {
+            cssClass = "status-invalid";
+        }
+        status.getStyleClass().add(cssClass);
+        
+        // Enhanced confidence and source display with helpful messages
+        if (result.getConfidence() > 0.0) {
+            String confidenceText = String.format("%.0f%% (%s)", result.getConfidence() * 100, result.getSource());
+            if (isLowConfidenceValid) {
+                confidenceText += " - Incertain";
+            }
+            confidenceLabel.setText(confidenceText);
+        } else {
+            confidenceLabel.setText(result.getSource().equals("UI") ? result.getDetails() : result.getSource());
+        }
+        
+        // Enhanced card border styling with low-confidence orange
+        String borderColor;
+        if (result.isValid() && !isLowConfidenceValid) {
+            borderColor = "#4ecca3";  // Green for high-confidence valid
+        } else if (result.isValid() && isLowConfidenceValid || result.isUncertain()) {
+            borderColor = "#ffa726";  // Orange for low-confidence valid or uncertain
+        } else {
+            borderColor = "#ff6b6b";  // Red for invalid/error
+        }
+        card.setStyle("-fx-border-color: " + borderColor + "; -fx-border-width: 2; -fx-border-radius: 15;");
+    }
+    
+    /**
+     * Calculates points based on validation result confidence and source.
+     * This method contains the scoring logic but not validation logic.
+     */
+    private int calculatePoints(ValidationResult result) {
+        if (!result.isValid()) {
+            return 0;
+        }
+        
+        // Base points for valid words
+        int basePoints = 2;
+        
+        // Bonus for high-confidence results
+        if (result.getConfidence() >= 0.9) {
+            basePoints += 1;
+        }
+        
+        // Different scoring based on validation source
+        switch (result.getSource()) {
+            case "FIXED_LIST":
+                // Standard points for deterministic validation
+                return basePoints;
+            case "DATABASE_CACHE":
+                // Cached results get standard points
+                return basePoints;
+            case "API":
+                // Future: API results might get bonus points
+                return basePoints + 1;
+            case "AI":
+                // Future: AI results might get different scoring
+                return basePoints;
+            default:
+                return basePoints;
+        }
     }
 
     private void animateSuccess(HBox card) {

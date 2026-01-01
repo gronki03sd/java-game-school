@@ -252,6 +252,18 @@
     -fx-font-size: 24px;
 }
 
+.status-uncertain {
+    -fx-text-fill: #ffa726;
+    -fx-font-size: 24px;
+}
+
+.confidence-label {
+    -fx-text-fill: #666;
+    -fx-font-size: 10px;
+    -fx-font-family: monospace;
+    -fx-wrap-text: true;
+}
+
 /* ========================================
    DIFFICULTY SELECTION
    ======================================== */
