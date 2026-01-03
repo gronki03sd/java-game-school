@@ -177,9 +177,31 @@ public class GameController {
         tf.setPrefWidth(200); // Reduced to make room for confidence display
         HBox.setHgrow(tf, Priority.ALWAYS);
 
-        // Real-time backend validation (replaces simple letter check)
+        // Show pending status while typing (no validation until submit/timeout)
         tf.textProperty().addListener((obs, oldVal, newVal) -> {
-            validateWordRealTime(tf, category, newVal);
+            Label status = statusLabels.get(category);
+            Label confidenceLabel = confidenceLabels.get(category);
+            
+            if (newVal == null || newVal.trim().isEmpty()) {
+                // Empty input - show pending state
+                status.setText("⏳");
+                status.getStyleClass().removeAll("status-valid", "status-invalid", "status-uncertain");
+                status.getStyleClass().add("status-pending");
+                confidenceLabel.setText("");
+                tf.setStyle("");
+            } else {
+                // Non-empty input - show pending state (no validation yet)
+                status.setText("⏳");
+                status.getStyleClass().removeAll("status-valid", "status-invalid", "status-uncertain");
+                status.getStyleClass().add("status-pending");
+                confidenceLabel.setText("En attente...");
+                
+                // Simple visual feedback for first letter (no validation)
+                String requiredStart = session.getCurrentLetter().toLowerCase();
+                String input = newVal.trim().toLowerCase();
+                boolean startsCorrect = input.startsWith(requiredStart);
+                tf.setStyle(startsCorrect ? "" : "-fx-border-color: #ffa726; -fx-border-width: 2;");
+            }
         });
 
         inputFields.put(category, tf);
@@ -318,13 +340,18 @@ public class GameController {
     }
 
     /**
-     * Final validation when time runs out or user clicks "Validate".
-     * Uses cached results from real-time validation to avoid re-computation.
-     * Awards points based on backend validation results, not just letter matching.
+     * Batch validation when time runs out or user clicks "Validate".
+     * Validates ALL entered words in one batch for better performance.
+     * This replaces the old real-time validation approach.
      */
     private void validateAll() {
         int points = 0;
+        
+        // Clear any cached results from previous rounds
+        cachedResults.clear();
+        usedWordsThisRound.clear();
 
+        // Batch validate all entered words
         for (Category c : session.getCategories()) {
             TextField tf = inputFields.get(c);
             String word = tf.getText() != null ? tf.getText().trim() : "";
@@ -332,22 +359,19 @@ public class GameController {
             Label confidenceLabel = confidenceLabels.get(c);
             HBox card = categoryCards.get(c);
 
-            // Use cached validation result if available, otherwise validate now
-            ValidationResult result = cachedResults.get(c);
-            if (result == null) {
-                // Fallback validation (shouldn't happen with real-time validation)
-                result = validateWordComplete(word, c);
-            }
+            // Perform validation now (not during typing)
+            ValidationResult result = validateWordComplete(word, c);
             
-            // Apply final validation result with enhanced UI feedback
+            // Cache result and apply visual feedback
+            cachedResults.put(c, result);
             applyValidationResult(result, status, confidenceLabel, card);
             
-            // Award points based on backend validation, not simple letter checks
+            // Award points based on validation results
             if (result.isValid()) {
                 points += calculatePoints(result);
                 animateSuccess(card);
             } else if (result.isUncertain()) {
-                points += 1; // Partial credit for uncertain results (API unavailable, etc.)
+                points += 1; // Partial credit for uncertain results
             }
 
             tf.setDisable(true);
@@ -366,50 +390,6 @@ public class GameController {
         delay.play();
     }
     
-    /**
-     * Real-time validation method called whenever user types in input field.
-     * 
-     * KEY IMPROVEMENT: This method provides IMMEDIATE backend validation feedback
-     * as users type, replacing the misleading "orange for correct letter" behavior.
-     * 
-     * OLD BEHAVIOR:
-     * - User types "asdfjkl" starting with "A"
-     * - UI shows orange highlight (misleading - suggests word might be valid)
-     * - Only at submit time would they discover it's nonsense
-     * 
-     * NEW BEHAVIOR:
-     * - User types "asdfjkl" starting with "A"
-     * - Backend validation runs immediately
-     * - UI shows red highlight with reason "Word not found in knowledge base"
-     * - User gets immediate, honest feedback
-     * 
-     * This creates a much better user experience with truthful, instant validation.
-     */
-    private void validateWordRealTime(TextField textField, Category category, String newValue) {
-        Label status = statusLabels.get(category);
-        Label confidenceLabel = confidenceLabels.get(category);
-        HBox card = categoryCards.get(category);
-        
-        if (newValue == null || newValue.trim().isEmpty()) {
-            // Empty input - reset to pending state
-            status.setText("⏳");
-            status.getStyleClass().removeAll("status-valid", "status-invalid", "status-uncertain");
-            status.getStyleClass().add("status-pending");
-            confidenceLabel.setText("");
-            textField.setStyle("");
-            cachedResults.remove(category);
-            return;
-        }
-        
-        // Perform complete validation using backend pipeline
-        ValidationResult result = validateWordComplete(newValue.trim(), category);
-        
-        // Cache the result for final validation
-        cachedResults.put(category, result);
-        
-        // Apply visual feedback
-        applyValidationResult(result, status, confidenceLabel, card);
-    }
     
     /**
      * Complete word validation using the sophisticated backend pipeline.

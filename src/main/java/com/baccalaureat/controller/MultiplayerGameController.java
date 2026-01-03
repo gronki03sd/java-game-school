@@ -159,12 +159,23 @@ public class MultiplayerGameController {
         HBox.setHgrow(tf, Priority.ALWAYS);
 
         tf.textProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal != null && !newVal.isEmpty()) {
+            Label status = statusLabels.get(category);
+            
+            if (newVal != null && !newVal.trim().isEmpty()) {
+                // Show pending status while typing (no validation until submit)
+                status.setText("⏳");
+                status.getStyleClass().removeAll("status-valid", "status-invalid", "status-uncertain");
+                status.getStyleClass().add("status-pending");
+                
+                // Simple visual feedback for first letter (no validation)
                 boolean startsCorrect = newVal.toUpperCase().startsWith(currentLetter);
                 tf.setStyle(startsCorrect ? 
-                    "-fx-border-color: #4ecca3; -fx-border-width: 2; -fx-border-radius: 10;" :
-                    "-fx-border-color: #ff6b6b; -fx-border-width: 2; -fx-border-radius: 10;");
+                    "" : "-fx-border-color: #ffa726; -fx-border-width: 2; -fx-border-radius: 10;");
             } else {
+                // Empty input - show pending state
+                status.setText("⏳");
+                status.getStyleClass().removeAll("status-valid", "status-invalid", "status-uncertain");
+                status.getStyleClass().add("status-pending");
                 tf.setStyle("");
             }
         });

@@ -1,7 +1,6 @@
 package com.baccalaureat.demo;
 
 import com.baccalaureat.dao.CategoryDAO;
-import com.baccalaureat.dao.DatabaseManager;
 import com.baccalaureat.model.Category;
 
 import java.util.List;

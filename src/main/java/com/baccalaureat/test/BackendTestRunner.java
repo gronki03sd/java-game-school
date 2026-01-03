@@ -11,7 +11,6 @@ import com.baccalaureat.model.ValidationResult;
 import com.baccalaureat.model.ValidationStatus;
 import com.baccalaureat.service.CategoryService;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.ArrayList;
 
