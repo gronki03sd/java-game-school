@@ -4,6 +4,7 @@ import com.baccalaureat.model.Category;
 import com.baccalaureat.model.ValidationResult;
 import com.baccalaureat.model.ValidationStatus;
 import com.baccalaureat.service.HttpClientService;
+import com.baccalaureat.service.CategoryService;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -28,15 +29,20 @@ import java.util.HashSet;
 public class WebConfigurableValidator implements CategoryValidator {
     
     private boolean enabled = true;
+    private CategoryService categoryService;
     private static final String DICTIONARY_API_URL = "https://api.dictionaryapi.dev/api/v2/entries/en/%s";
     private static final int API_TIMEOUT_SECONDS = 8;
+    
+    public WebConfigurableValidator(CategoryService categoryService) {
+        this.categoryService = categoryService;
+    }
     
     /**
      * Category-specific keywords for definition analysis.
      * When DictionaryAPI.dev returns a definition, we check if it contains
      * category-relevant keywords to determine semantic category match.
      */
-    private static final Map<Category, Set<String>> CATEGORY_KEYWORDS = new HashMap<>();
+    private static final Map<String, Set<String>> CATEGORY_KEYWORDS = new HashMap<>();
     
     static {
         // ANIMAL category keywords
@@ -54,7 +60,7 @@ public class WebConfigurableValidator implements CategoryValidator {
         animalKeywords.add("species");
         animalKeywords.add("vertebrate");
         animalKeywords.add("invertebrate");
-        CATEGORY_KEYWORDS.put(Category.ANIMAL, animalKeywords);
+        CATEGORY_KEYWORDS.put("ANIMAL", animalKeywords);
         
         // FRUIT category keywords
         Set<String> fruitKeywords = new HashSet<>();
@@ -70,7 +76,7 @@ public class WebConfigurableValidator implements CategoryValidator {
         fruitKeywords.add("organic");
         fruitKeywords.add("fresh");
         fruitKeywords.add("ripe");
-        CATEGORY_KEYWORDS.put(Category.FRUIT, fruitKeywords);
+        CATEGORY_KEYWORDS.put("FRUIT", fruitKeywords);
         
         // PAYS (Country) category keywords
         Set<String> countryKeywords = new HashSet<>();
@@ -86,7 +92,7 @@ public class WebConfigurableValidator implements CategoryValidator {
         countryKeywords.add("continent");
         countryKeywords.add("border");
         countryKeywords.add("citizenship");
-        CATEGORY_KEYWORDS.put(Category.PAYS, countryKeywords);
+        CATEGORY_KEYWORDS.put("PAYS", countryKeywords);
         
         // VILLE (City) category keywords
         Set<String> cityKeywords = new HashSet<>();
@@ -102,12 +108,12 @@ public class WebConfigurableValidator implements CategoryValidator {
         cityKeywords.add("population");
         cityKeywords.add("downtown");
         cityKeywords.add("suburb");
-        CATEGORY_KEYWORDS.put(Category.VILLE, cityKeywords);
+        CATEGORY_KEYWORDS.put("VILLE", cityKeywords);
         
         // Add other categories as needed
-        CATEGORY_KEYWORDS.put(Category.PRENOM, new HashSet<>());
-        CATEGORY_KEYWORDS.put(Category.METIER, new HashSet<>());
-        CATEGORY_KEYWORDS.put(Category.OBJET, new HashSet<>());
+        CATEGORY_KEYWORDS.put("PRENOM", new HashSet<>());
+        CATEGORY_KEYWORDS.put("METIER", new HashSet<>());
+        CATEGORY_KEYWORDS.put("OBJET", new HashSet<>());
     }
     
     @Override
@@ -176,7 +182,7 @@ public class WebConfigurableValidator implements CategoryValidator {
             }
             
             // Check for category-specific keywords in definitions
-            Set<String> categoryKeywords = CATEGORY_KEYWORDS.get(category);
+            Set<String> categoryKeywords = CATEGORY_KEYWORDS.get(category.getName());
             if (categoryKeywords == null || categoryKeywords.isEmpty()) {
                 // Category not supported by this validator
                 return new ValidationResult(ValidationStatus.UNCERTAIN, 0.6, getSourceName(), 
@@ -235,34 +241,36 @@ public class WebConfigurableValidator implements CategoryValidator {
         System.out.println("==================================================");
         System.out.println("Testing WebConfigurableValidator with DictionaryAPI.dev...\n");
         
-        WebConfigurableValidator validator = new WebConfigurableValidator();
+        // Initialize CategoryService for testing
+        CategoryService categoryService = new CategoryService();
+        WebConfigurableValidator validator = new WebConfigurableValidator(categoryService);
         
         // Test real words in correct categories
         System.out.println("--- Testing Real Words in Correct Categories ---");
-        testValidation(validator, "dog", Category.ANIMAL, "Real animal word");
-        testValidation(validator, "cat", Category.ANIMAL, "Real animal word");
-        testValidation(validator, "apple", Category.FRUIT, "Real fruit word");
-        testValidation(validator, "banana", Category.FRUIT, "Real fruit word");
-        testValidation(validator, "france", Category.PAYS, "Real country word");
-        testValidation(validator, "paris", Category.VILLE, "Real city word");
+        testValidation(validator, "dog", categoryService.findByName("ANIMAL").orElse(null), "Real animal word");
+        testValidation(validator, "cat", categoryService.findByName("ANIMAL").orElse(null), "Real animal word");
+        testValidation(validator, "apple", categoryService.findByName("FRUIT").orElse(null), "Real fruit word");
+        testValidation(validator, "banana", categoryService.findByName("FRUIT").orElse(null), "Real fruit word");
+        testValidation(validator, "france", categoryService.findByName("PAYS").orElse(null), "Real country word");
+        testValidation(validator, "paris", categoryService.findByName("VILLE").orElse(null), "Real city word");
         
         // Test real words in wrong categories
         System.out.println("--- Testing Real Words in Wrong Categories ---");
-        testValidation(validator, "dog", Category.FRUIT, "Animal word in fruit category");
-        testValidation(validator, "apple", Category.ANIMAL, "Fruit word in animal category");
-        testValidation(validator, "paris", Category.ANIMAL, "City word in animal category");
+        testValidation(validator, "dog", categoryService.findByName("FRUIT").orElse(null), "Animal word in fruit category");
+        testValidation(validator, "apple", categoryService.findByName("ANIMAL").orElse(null), "Fruit word in animal category");
+        testValidation(validator, "paris", categoryService.findByName("ANIMAL").orElse(null), "City word in animal category");
         
         // Test nonsense words
         System.out.println("--- Testing Nonsense Words ---");
-        testValidation(validator, "zzxqp", Category.ANIMAL, "Nonsense word");
-        testValidation(validator, "blahblah123", Category.FRUIT, "Nonsense word");
-        testValidation(validator, "qwerty", Category.PAYS, "Common nonsense word");
+        testValidation(validator, "zzxqp", categoryService.findByName("ANIMAL").orElse(null), "Nonsense word");
+        testValidation(validator, "blahblah123", categoryService.findByName("FRUIT").orElse(null), "Nonsense word");
+        testValidation(validator, "qwerty", categoryService.findByName("PAYS").orElse(null), "Common nonsense word");
         
         // Test empty strings
         System.out.println("--- Testing Edge Cases ---");
-        testValidation(validator, "", Category.ANIMAL, "Empty string");
-        testValidation(validator, "   ", Category.FRUIT, "Whitespace only");
-        testValidation(validator, null, Category.VILLE, "Null input");
+        testValidation(validator, "", categoryService.findByName("ANIMAL").orElse(null), "Empty string");
+        testValidation(validator, "   ", categoryService.findByName("FRUIT").orElse(null), "Whitespace only");
+        testValidation(validator, null, categoryService.findByName("VILLE").orElse(null), "Null input");
         
         System.out.println("==================================================");
         System.out.println("✅ WebConfigurableValidator test completed");

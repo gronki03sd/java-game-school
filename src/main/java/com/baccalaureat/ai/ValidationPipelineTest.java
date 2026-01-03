@@ -3,6 +3,9 @@ package com.baccalaureat.ai;
 import com.baccalaureat.model.Category;
 import com.baccalaureat.model.ValidationResult;
 import com.baccalaureat.model.ValidationStatus;
+import com.baccalaureat.service.CategoryService;
+
+import java.util.Optional;
 
 /**
  * Comprehensive test of the complete validation pipeline.
@@ -10,38 +13,52 @@ import com.baccalaureat.model.ValidationStatus;
  */
 public class ValidationPipelineTest {
     
+    private static final CategoryService categoryService = new CategoryService();
+    
     public static void main(String[] args) {
         System.out.println("🔧 VALIDATION PIPELINE TEST");
         System.out.println("==================================================");
         System.out.println("Testing complete validation pipeline with CategorizationEngine...\n");
         
         // Initialize validation engine
-        CategorizationEngine engine = new CategorizationEngine();
+        CategorizationEngine engine = new CategorizationEngine(categoryService);
         
         // Test various scenarios
-        testCategory(engine, Category.ANIMAL, new String[]{
-            "chien", "chat", "elephant", "lion",    // Should be found by FixedListValidator
-            "dog", "cat", "tiger",                  // Might need API/AI validation
-            "apple", "car", "invalidword123"       // Should be invalid
-        });
+        Optional<Category> animalCategory = categoryService.findByName("ANIMAL");
+        if (animalCategory.isPresent()) {
+            testCategory(engine, animalCategory.get(), new String[]{
+                "chien", "chat", "elephant", "lion",    // Should be found by FixedListValidator
+                "dog", "cat", "tiger",                  // Might need API/AI validation
+                "apple", "car", "invalidword123"       // Should be invalid
+            });
+        }
         
-        testCategory(engine, Category.FRUIT, new String[]{
-            "pomme", "banane", "orange", "fraise",  // Should be found by FixedListValidator
-            "apple", "mango", "kiwi",               // Might need API/AI validation
-            "dog", "house", "invalidword123"        // Should be invalid
-        });
+        Optional<Category> fruitCategory = categoryService.findByName("FRUIT");
+        if (fruitCategory.isPresent()) {
+            testCategory(engine, fruitCategory.get(), new String[]{
+                "pomme", "banane", "orange", "fraise",  // Should be found by FixedListValidator
+                "apple", "mango", "kiwi",               // Might need API/AI validation
+                "dog", "house", "invalidword123"        // Should be invalid
+            });
+        }
         
-        testCategory(engine, Category.PAYS, new String[]{
-            "france", "allemagne", "espagne",      // Should be found by FixedListValidator
-            "germany", "spain", "italy",           // Might need API/AI validation
-            "dog", "apple", "invalidword123"       // Should be invalid
-        });
+        Optional<Category> paysCategory = categoryService.findByName("PAYS");
+        if (paysCategory.isPresent()) {
+            testCategory(engine, paysCategory.get(), new String[]{
+                "france", "allemagne", "espagne",      // Should be found by FixedListValidator
+                "germany", "spain", "italy",           // Might need API/AI validation
+                "dog", "apple", "invalidword123"       // Should be invalid
+            });
+        }
         
-        testCategory(engine, Category.VILLE, new String[]{
-            "paris", "lyon", "marseille",          // Should be found by FixedListValidator
-            "london", "berlin", "madrid",          // Might need API/AI validation
-            "dog", "apple", "invalidword123"       // Should be invalid
-        });
+        Optional<Category> villeCategory = categoryService.findByName("VILLE");
+        if (villeCategory.isPresent()) {
+            testCategory(engine, villeCategory.get(), new String[]{
+                "paris", "lyon", "marseille",          // Should be found by FixedListValidator
+                "london", "berlin", "madrid",          // Might need API/AI validation
+                "dog", "apple", "invalidword123"       // Should be invalid
+            });
+        }
         
         System.out.println("==================================================");
         System.out.println("✅ Validation pipeline test completed");

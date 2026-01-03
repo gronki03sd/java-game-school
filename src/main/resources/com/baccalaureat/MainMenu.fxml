@@ -43,7 +43,7 @@
         <VBox alignment="CENTER" styleClass="info-card" spacing="5">
             <Label text="📊" style="-fx-font-size: 24px;"/>
             <Label text="Catégories" styleClass="info-label"/>
-            <Label text="8" styleClass="info-value"/>
+            <Label fx:id="categoriesCountLabel" text="0" styleClass="info-value"/>
         </VBox>
     </HBox>
     
@@ -71,7 +71,10 @@
             onAction="#handleStartMultiplayer" styleClass="multiplayer-button" prefWidth="280"/>
         <Button fx:id="howToPlayButton" text="📖  Comment Jouer" 
             onAction="#handleHowToPlay" styleClass="secondary-button" prefWidth="280"/>
-        <Button fx:id="themeToggleButton" text="🌙 Mode Sombre" onAction="#handleThemeToggle" styleClass="secondary-button" prefWidth="180"/>
+        <HBox spacing="15" alignment="CENTER">
+            <Button fx:id="themeToggleButton" text="🌙 Mode Sombre" onAction="#handleThemeToggle" styleClass="secondary-button" prefWidth="180"/>
+            <Button fx:id="categoryConfigButton" text="⚙️ Catégories" onAction="#handleCategoryConfig" styleClass="secondary-button" prefWidth="140"/>
+        </HBox>
         </VBox>
     
     <!-- Spacer -->

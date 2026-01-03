@@ -3,6 +3,7 @@ package com.baccalaureat.controller;
 import java.io.IOException;
 
 import com.baccalaureat.model.GameSession;
+import com.baccalaureat.service.CategoryService;
 
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -21,14 +22,17 @@ public class MainMenuController {
     @FXML private Button startMultiplayerButton;
     @FXML private Button howToPlayButton;
     @FXML private Button themeToggleButton;
+    @FXML private Button categoryConfigButton;
     @FXML private Label highScoreLabel;
     @FXML private Label gamesPlayedLabel;
+    @FXML private Label categoriesCountLabel;
     @FXML private ToggleButton easyBtn;
     @FXML private ToggleButton mediumBtn;
     @FXML private ToggleButton hardBtn;
 
     private ToggleGroup difficultyGroup;
     private boolean darkMode = false;
+    private final CategoryService categoryService = new CategoryService();
 
     @FXML
     private void initialize() {
@@ -49,8 +53,17 @@ public class MainMenuController {
         // Update stats
         highScoreLabel.setText(String.valueOf(GameSession.getHighScore()));
         gamesPlayedLabel.setText(String.valueOf(GameSession.getGamesPlayed()));
+        
+        // Load categories count from database
+        updateCategoriesCount();
+        
         // Set initial theme
         applyTheme(false);
+    }
+    
+    private void updateCategoriesCount() {
+        int enabledCount = categoryService.getEnabledCategories().size();
+        categoriesCountLabel.setText(String.valueOf(enabledCount));
     }
     @FXML
     private void handleThemeToggle(ActionEvent event) {
@@ -161,5 +174,35 @@ public class MainMenuController {
         }
         stage.setScene(scene);
         stage.show();
+    }
+    
+    @FXML
+    private void handleCategoryConfig() {
+        System.out.println("Category Config button clicked!"); // Debug log
+        try {
+            // Open category management window
+            Stage categoryStage = new Stage();
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/CategoryConfig.fxml"));
+            Parent root = loader.load();
+            Scene scene = new Scene(root, 800, 600);
+            
+            // Apply current theme
+            if (darkMode) {
+                scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-dark.css").toExternalForm());
+            } else {
+                scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-light.css").toExternalForm());
+            }
+            
+            categoryStage.setTitle("Gestion des Catégories");
+            categoryStage.setScene(scene);
+            categoryStage.initOwner(startSoloButton.getScene().getWindow());
+            categoryStage.showAndWait();
+            
+            // Refresh categories count after configuration changes
+            updateCategoriesCount();
+        } catch (Exception e) {
+            System.err.println("Error opening category configuration: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }

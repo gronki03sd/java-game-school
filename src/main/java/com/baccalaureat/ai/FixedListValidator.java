@@ -3,6 +3,7 @@ package com.baccalaureat.ai;
 import com.baccalaureat.model.Category;
 import com.baccalaureat.model.ValidationResult;
 import com.baccalaureat.model.ValidationStatus;
+import com.baccalaureat.service.CategoryService;
 
 import java.util.Set;
 import java.util.Map;
@@ -16,48 +17,49 @@ import java.util.HashSet;
  */
 public class FixedListValidator implements CategoryValidator {
     
-    private static final Map<Category, Set<String>> VALID_WORDS = new HashMap<>();
+    private static final Map<String, Set<String>> VALID_WORDS = new HashMap<>();
+    private CategoryService categoryService;
     
     static {
         // Initialize with some known valid words for each category
         // These are deterministic lists that can be expanded
-        VALID_WORDS.put(Category.PAYS, Set.of(
+        VALID_WORDS.put("PAYS", Set.of(
             "france", "allemagne", "italie", "espagne", "angleterre", "portugal", 
             "suisse", "belgique", "canada", "bresil", "argentine", "japon", "chine", "russie"
         ));
         
-        VALID_WORDS.put(Category.VILLE, Set.of(
+        VALID_WORDS.put("VILLE", Set.of(
             "paris", "lyon", "marseille", "toulouse", "nice", "strasbourg", "bordeaux", 
             "lille", "rennes", "reims", "montpellier", "dijon", "angers", "nimes"
         ));
         
-        VALID_WORDS.put(Category.ANIMAL, Set.of(
+        VALID_WORDS.put("ANIMAL", Set.of(
             "chien", "chat", "cheval", "vache", "porc", "mouton", "lapin", "souris", 
             "lion", "tigre", "elephant", "girafe", "zebre", "renard", "loup", "ours"
         ));
         
-        VALID_WORDS.put(Category.METIER, Set.of(
+        VALID_WORDS.put("METIER", Set.of(
             "medecin", "infirmier", "professeur", "ingenieur", "avocat", "comptable", 
             "architecte", "plombier", "electricien", "boulanger", "coiffeur", "dentiste"
         ));
         
-        VALID_WORDS.put(Category.PRENOM, Set.of(
+        VALID_WORDS.put("PRENOM", Set.of(
             "pierre", "paul", "jean", "marie", "anne", "sophie", "claire", "julien", 
             "nicolas", "thomas", "antoine", "matthieu", "alexandre", "francois"
         ));
         
-        VALID_WORDS.put(Category.FRUIT, Set.of(
+        VALID_WORDS.put("FRUIT", Set.of(
             "pomme", "poire", "banane", "orange", "citron", "fraise", "cerise", "peche", 
             "abricot", "prune", "raisin", "melon", "pasteque", "ananas", "kiwi", "mangue",
             "tomate", "carotte", "pomme de terre", "salade", "radis", "navet"
         ));
         
-        VALID_WORDS.put(Category.OBJET, Set.of(
+        VALID_WORDS.put("OBJET", Set.of(
             "table", "chaise", "lit", "armoire", "television", "telephone", "ordinateur", 
             "livre", "stylo", "crayon", "voiture", "velo", "montre", "lunettes"
         ));
         
-        VALID_WORDS.put(Category.CELEBRITE, Set.of(
+        VALID_WORDS.put("CELEBRITE", Set.of(
             "napoleon", "de gaulle", "moliere", "voltaire", "hugo", "balzac", "zola", 
             "monet", "renoir", "picasso", "dali", "rodin", "pasteur", "curie"
         ));
@@ -122,12 +124,12 @@ public class FixedListValidator implements CategoryValidator {
      * Adds a word to the fixed list for a category (for dynamic expansion).
      */
     public static void addValidWord(Category category, String word) {
-        Set<String> existingWords = VALID_WORDS.get(category);
+        Set<String> existingWords = VALID_WORDS.get(category.getName());
         if (existingWords != null) {
             // Create a new mutable set since Set.of() creates immutable sets
             Set<String> newWords = new HashSet<>(existingWords);
             newWords.add(word.toLowerCase().trim());
-            VALID_WORDS.put(category, newWords);
+            VALID_WORDS.put(category.getName(), newWords);
         }
     }
 }

@@ -3,6 +3,7 @@ package com.baccalaureat.ai;
 import com.baccalaureat.model.Category;
 import com.baccalaureat.model.ValidationResult;
 import com.baccalaureat.model.ValidationStatus;
+import com.baccalaureat.service.CategoryService;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -20,12 +21,12 @@ public class CategorizationEngine {
     private final List<CategoryValidator> validators;
     private static final double CONFIDENCE_THRESHOLD = 0.7;
     
-    public CategorizationEngine() {
+    public CategorizationEngine(CategoryService categoryService) {
         validators = new ArrayList<>();
-        validators.add(new LocalCacheValidator());       // STEP 1: Local database cache
-        validators.add(new FixedListValidator());        // STEP 2: Deterministic validation
-        validators.add(new WebConfigurableValidator());  // STEP 3: Web API validation
-        validators.add(new SemanticAiValidator());       // STEP 4: AI validation (future)
+        validators.add(new LocalCacheValidator());              // STEP 1: Local database cache
+        validators.add(new FixedListValidator());            // STEP 2: Deterministic validation  
+        validators.add(new WebConfigurableValidator(categoryService)); // STEP 3: Web API validation
+        validators.add(new SemanticAiValidator());              // STEP 4: AI validation (future)
     }
     
     /**

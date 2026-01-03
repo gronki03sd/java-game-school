@@ -1,6 +1,7 @@
 package com.baccalaureat.ai;
 
 import com.baccalaureat.model.Category;
+import com.baccalaureat.service.CategoryService;
 
 import java.util.Map;
 import java.util.HashMap;
@@ -15,42 +16,42 @@ import java.util.HashSet;
  */
 public class SemanticAnchorConfig {
     
-    private static final Map<Category, Set<String>> CATEGORY_ANCHORS = new HashMap<>();
+    private static final Map<String, Set<String>> CATEGORY_ANCHORS = new HashMap<>();
     
     static {
         // TODO: AI/API implementation in later phase
         // These anchor words would be used to create semantic embeddings
         // for each category, enabling AI-based similarity matching
         
-        CATEGORY_ANCHORS.put(Category.PAYS, Set.of(
+        CATEGORY_ANCHORS.put("PAYS", Set.of(
             "nation", "territoire", "etat", "republique", "royaume", "continent", "frontiere", "capitale"
         ));
         
-        CATEGORY_ANCHORS.put(Category.VILLE, Set.of(
+        CATEGORY_ANCHORS.put("VILLE", Set.of(
             "metropole", "commune", "agglomeration", "banlieue", "centre-ville", "quartier", "avenue", "place"
         ));
         
-        CATEGORY_ANCHORS.put(Category.ANIMAL, Set.of(
+        CATEGORY_ANCHORS.put("ANIMAL", Set.of(
             "mammifere", "oiseau", "reptile", "poisson", "insecte", "domestique", "sauvage", "predateur", "herbivore"
         ));
         
-        CATEGORY_ANCHORS.put(Category.METIER, Set.of(
+        CATEGORY_ANCHORS.put("METIER", Set.of(
             "profession", "travail", "emploi", "carriere", "competence", "salaire", "formation", "expertise"
         ));
         
-        CATEGORY_ANCHORS.put(Category.PRENOM, Set.of(
+        CATEGORY_ANCHORS.put("PRENOM", Set.of(
             "nom", "identite", "bapteme", "naissance", "masculin", "feminin", "traditionnel", "moderne"
         ));
         
-        CATEGORY_ANCHORS.put(Category.FRUIT, Set.of(
+        CATEGORY_ANCHORS.put("FRUIT", Set.of(
             "nutrition", "vitamine", "sucre", "jus", "verger", "recolte", "saveur", "legume", "potager"
         ));
         
-        CATEGORY_ANCHORS.put(Category.OBJET, Set.of(
+        CATEGORY_ANCHORS.put("OBJET", Set.of(
             "materiel", "outil", "utile", "fabrique", "plastique", "metal", "bois", "quotidien", "maison"
         ));
         
-        CATEGORY_ANCHORS.put(Category.CELEBRITE, Set.of(
+        CATEGORY_ANCHORS.put("CELEBRITE", Set.of(
             "celebre", "connu", "personnalite", "star", "artiste", "histoire", "media", "renommee"
         ));
     }
@@ -62,7 +63,10 @@ public class SemanticAnchorConfig {
      * @return set of anchor words for semantic similarity
      */
     public static Set<String> getAnchors(Category category) {
-        return new HashSet<>(CATEGORY_ANCHORS.getOrDefault(category, Set.of()));
+        if (category == null) {
+            return new HashSet<>();
+        }
+        return new HashSet<>(CATEGORY_ANCHORS.getOrDefault(category.name(), Set.of()));
     }
     
     /**
@@ -72,7 +76,9 @@ public class SemanticAnchorConfig {
      * @param anchor the anchor word to add
      */
     public static void addAnchor(Category category, String anchor) {
-        CATEGORY_ANCHORS.computeIfAbsent(category, k -> new HashSet<>()).add(anchor.toLowerCase().trim());
+        if (category != null && anchor != null) {
+            CATEGORY_ANCHORS.computeIfAbsent(category.name(), k -> new HashSet<>()).add(anchor.toLowerCase().trim());
+        }
     }
     
     /**
@@ -82,18 +88,20 @@ public class SemanticAnchorConfig {
      * @param anchor the anchor word to remove
      */
     public static void removeAnchor(Category category, String anchor) {
-        Set<String> anchors = CATEGORY_ANCHORS.get(category);
-        if (anchors != null) {
-            anchors.remove(anchor.toLowerCase().trim());
+        if (category != null && anchor != null) {
+            Set<String> anchors = CATEGORY_ANCHORS.get(category.name());
+            if (anchors != null) {
+                anchors.remove(anchor.toLowerCase().trim());
+            }
         }
     }
     
     /**
-     * Gets all categories that have anchor configurations.
+     * Gets all configured category names.
      * 
-     * @return set of configured categories
+     * @return set of configured category names
      */
-    public static Set<Category> getConfiguredCategories() {
+    public static Set<String> getConfiguredCategoryNames() {
         return new HashSet<>(CATEGORY_ANCHORS.keySet());
     }
     

@@ -6,6 +6,8 @@ import com.baccalaureat.model.Category;
 import com.baccalaureat.model.ValidationResult;
 import com.baccalaureat.model.ValidationStatus;
 
+import java.util.Optional;
+
 /**
  * Service layer for word validation.
  * Coordinates validation flow but delegates categorization logic to AI pipeline.
@@ -13,7 +15,8 @@ import com.baccalaureat.model.ValidationStatus;
  */
 public class ValidationService {
     private final WordDAO wordDAO = new WordDAO();
-    private final CategorizationEngine categorizationEngine = new CategorizationEngine();
+    private final CategoryService categoryService = new CategoryService();
+    private final CategorizationEngine categorizationEngine = new CategorizationEngine(categoryService);
     private final CacheService cacheService = new CacheService();
     
     /**
@@ -44,14 +47,15 @@ public class ValidationService {
             return new ValidationResult(ValidationStatus.VALID, 1.0, "DATABASE_CACHE", "Found in local cache");
         }
         
-        // Step 2: Parse category enum (if possible)
-        Category categoryEnum = parseCategory(normalizedCategory);
-        if (categoryEnum == null) {
+// Step 2: Resolve category from dynamic categories
+        Optional<Category> categoryOpt = categoryService.findByName(normalizedCategory);
+        if (categoryOpt.isEmpty()) {
             return new ValidationResult(ValidationStatus.ERROR, 0.0, "SERVICE", "Unknown category: " + category);
         }
-        
+        Category categoryObj = categoryOpt.get();
+
         // Step 3: Delegate to categorization engine
-        ValidationResult result = categorizationEngine.validate(normalizedWord, categoryEnum);
+        ValidationResult result = categorizationEngine.validate(normalizedWord, categoryObj);
         
         // Step 4: Cache valid results for future instant lookup
         if (result.isValid()) {
@@ -60,7 +64,7 @@ public class ValidationService {
                 wordDAO.saveWord(normalizedCategory, normalizedWord);
             }
             // Save to new cache system
-            cacheService.saveValidatedWord(normalizedWord, categoryEnum);
+            cacheService.saveValidatedWord(normalizedWord, categoryObj);
         }
         
         return result;
@@ -106,33 +110,12 @@ public class ValidationService {
     }
     
     /**
-     * Attempts to parse a category string to the Category enum.
+     * Gets the category service for category operations.
      * 
-     * @param categoryStr the category string
-     * @return Category enum or null if not found
+     * @return the category service instance
      */
-    private Category parseCategory(String categoryStr) {
-        if (categoryStr == null || categoryStr.trim().isEmpty()) {
-            return null;
-        }
-        
-        // Try exact match first
-        for (Category category : Category.values()) {
-            if (category.name().toLowerCase().equals(categoryStr) ||
-                category.displayName().toLowerCase().equals(categoryStr)) {
-                return category;
-            }
-        }
-        
-        // Try partial matches
-        for (Category category : Category.values()) {
-            if (category.displayName().toLowerCase().contains(categoryStr) ||
-                categoryStr.contains(category.displayName().toLowerCase())) {
-                return category;
-            }
-        }
-        
-        return null;
+    public CategoryService getCategoryService() {
+        return categoryService;
     }
     
     /**

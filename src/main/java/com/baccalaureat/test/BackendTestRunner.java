@@ -8,6 +8,7 @@ import com.baccalaureat.ai.CategoryValidator;
 import com.baccalaureat.model.Category;
 import com.baccalaureat.model.ValidationResult;
 import com.baccalaureat.model.ValidationStatus;
+import com.baccalaureat.service.CategoryService;
 
 import java.util.Arrays;
 import java.util.List;
@@ -31,40 +32,45 @@ import java.util.ArrayList;
 public class BackendTestRunner {
     
     private final CategorizationEngine engine;
-    
-    // Test data: mix of words that should be found in different validators
-    private static final TestCase[] TEST_CASES = {
-        // Words that should be found in FixedListValidator (high confidence, FIXED_LIST source)
-        new TestCase(Category.ANIMAL, "chat", "Expected in FixedList"),
-        new TestCase(Category.ANIMAL, "chien", "Expected in FixedList"),
-        new TestCase(Category.PAYS, "france", "Expected in FixedList"),
-        new TestCase(Category.VILLE, "paris", "Expected in FixedList"),
-        new TestCase(Category.FRUIT, "pomme", "Expected in FixedList"),
-        
-        // Words that should NOT be in FixedList but exist in English (API validation)
-        new TestCase(Category.ANIMAL, "elephant", "Should fallback to API"),
-        new TestCase(Category.ANIMAL, "butterfly", "Should fallback to API"),
-        new TestCase(Category.PAYS, "australia", "Should fallback to API"),
-        new TestCase(Category.VILLE, "london", "Should fallback to API"),
-        new TestCase(Category.FRUIT, "pineapple", "Should fallback to API"),
-        
-        // Invalid/non-existent words (should be rejected by both validators)
-        new TestCase(Category.ANIMAL, "xyzabc123", "Invalid word test"),
-        new TestCase(Category.PAYS, "fakecountry", "Invalid word test"),
-        new TestCase(Category.VILLE, "nonexistentcity", "Invalid word test"),
-        
-        // Edge cases
-        new TestCase(Category.ANIMAL, "", "Empty string test"),
-        new TestCase(Category.ANIMAL, "   ", "Whitespace test"),
-        new TestCase(Category.ANIMAL, "Cat", "Case sensitivity test")
-    };
+    private final CategoryService categoryService;
+    private final TestCase[] testCases;
     
     public BackendTestRunner() {
+        // Initialize CategoryService for validators
+        this.categoryService = new CategoryService();
+        
+        // Initialize test cases with dynamic categories
+        this.testCases = new TestCase[]{
+            // Words that should be found in FixedListValidator (high confidence, FIXED_LIST source)
+            new TestCase(categoryService.findByName("ANIMAL").orElse(null), "chat", "Expected in FixedList"),
+            new TestCase(categoryService.findByName("ANIMAL").orElse(null), "chien", "Expected in FixedList"),
+            new TestCase(categoryService.findByName("PAYS").orElse(null), "france", "Expected in FixedList"),
+            new TestCase(categoryService.findByName("VILLE").orElse(null), "paris", "Expected in FixedList"),
+            new TestCase(categoryService.findByName("FRUIT").orElse(null), "pomme", "Expected in FixedList"),
+            
+            // Words that should NOT be in FixedList but exist in English (API validation)
+            new TestCase(categoryService.findByName("ANIMAL").orElse(null), "elephant", "Should fallback to API"),
+            new TestCase(categoryService.findByName("ANIMAL").orElse(null), "butterfly", "Should fallback to API"),
+            new TestCase(categoryService.findByName("PAYS").orElse(null), "australia", "Should fallback to API"),
+            new TestCase(categoryService.findByName("VILLE").orElse(null), "london", "Should fallback to API"),
+            new TestCase(categoryService.findByName("FRUIT").orElse(null), "pineapple", "Should fallback to API"),
+            
+            // Invalid/non-existent words (should be rejected by both validators)
+            new TestCase(categoryService.findByName("ANIMAL").orElse(null), "xyzabc123", "Invalid word test"),
+            new TestCase(categoryService.findByName("PAYS").orElse(null), "fakecountry", "Invalid word test"),
+            new TestCase(categoryService.findByName("VILLE").orElse(null), "nonexistentcity", "Invalid word test"),
+            
+            // Edge cases
+            new TestCase(categoryService.findByName("ANIMAL").orElse(null), "", "Empty string test"),
+            new TestCase(categoryService.findByName("ANIMAL").orElse(null), "   ", "Whitespace test"),
+            new TestCase(categoryService.findByName("ANIMAL").orElse(null), "Cat", "Case sensitivity test")
+        };
+        
         // Initialize validation pipeline
         // Order: FixedList → Web API → SemanticAI (when ready)
         List<CategoryValidator> validators = new ArrayList<>();
         validators.add(new FixedListValidator());
-        validators.add(new WebConfigurableValidator());  // Replaced ApiCategoryValidator
+        validators.add(new WebConfigurableValidator(categoryService));  // Replaced ApiCategoryValidator
         // TODO: Add SemanticAiValidator when AI implementation is ready
         // validators.add(new SemanticAiValidator());
         
@@ -100,7 +106,7 @@ public class BackendTestRunner {
         System.out.println("-".repeat(40));
         System.out.println("Available validators: " + engine.getAvailableValidators());
         System.out.println("Confidence threshold: " + engine.getConfidenceThreshold());
-        System.out.println("Categories to test: " + Arrays.toString(Category.values()));
+        System.out.println("Categories to test: " + categoryService.getEnabledCategories().size());
     }
     
     /**
@@ -110,7 +116,7 @@ public class BackendTestRunner {
         System.out.println("\\n🔍 SINGLE WORD VALIDATION TESTS:");
         System.out.println("-".repeat(40));
         
-        for (TestCase testCase : TEST_CASES) {
+        for (TestCase testCase : testCases) {
             System.out.printf("Testing: %-15s | Category: %-8s | %s\\n", 
                             "'" + testCase.word + "'", 
                             testCase.category.name(), 
@@ -133,7 +139,7 @@ public class BackendTestRunner {
         System.out.println("\\n📂 CATEGORY-BASED TESTS:");
         System.out.println("-".repeat(40));
         
-        for (Category category : Category.values()) {
+        for (Category category : categoryService.getEnabledCategories()) {
             System.out.println("\\nCategory: " + category.displayName() + " (" + category.name() + ")");
             System.out.println("Hint: " + category.getHint());
             
@@ -159,7 +165,12 @@ public class BackendTestRunner {
         System.out.println("-".repeat(40));
         
         String[] gameLetters = {"A", "B", "C", "M", "P"};
-        Category[] gameCategories = {Category.ANIMAL, Category.PAYS, Category.VILLE, Category.FRUIT};
+        Category[] gameCategories = {
+            categoryService.findByName("ANIMAL").orElse(null),
+            categoryService.findByName("PAYS").orElse(null), 
+            categoryService.findByName("VILLE").orElse(null),
+            categoryService.findByName("FRUIT").orElse(null)
+        };
         
         for (String letter : gameLetters) {
             System.out.println("\\n🎯 Round with letter: " + letter);
@@ -200,7 +211,7 @@ public class BackendTestRunner {
         
         for (int i = 0; i < iterations; i++) {
             for (String word : testWords) {
-                engine.validate(word, Category.ANIMAL);
+                engine.validate(word, categoryService.findByName("ANIMAL").orElse(null));
             }
         }
         
@@ -215,16 +226,28 @@ public class BackendTestRunner {
      * Get test words specific to a category.
      */
     private String[] getTestWordsForCategory(Category category) {
-        return switch (category) {
-            case ANIMAL -> new String[]{"chat", "elephant"};
-            case PAYS -> new String[]{"france", "canada"};
-            case VILLE -> new String[]{"paris", "london"};
-            case FRUIT -> new String[]{"pomme", "apple"};
-            case METIER -> new String[]{"medecin", "teacher"};
-            case PRENOM -> new String[]{"pierre", "john"};
-            case OBJET -> new String[]{"table", "computer"};
-            case CELEBRITE -> new String[]{"napoleon", "einstein"};
-        };
+        if (category == null) return new String[]{"test", "word"};
+        
+        String categoryName = category.name();
+        if ("ANIMAL".equals(categoryName)) {
+            return new String[]{"chat", "elephant"};
+        } else if ("PAYS".equals(categoryName)) {
+            return new String[]{"france", "canada"};
+        } else if ("VILLE".equals(categoryName)) {
+            return new String[]{"paris", "london"};
+        } else if ("FRUIT".equals(categoryName)) {
+            return new String[]{"pomme", "apple"};
+        } else if ("METIER".equals(categoryName)) {
+            return new String[]{"medecin", "teacher"};
+        } else if ("PRENOM".equals(categoryName)) {
+            return new String[]{"pierre", "john"};
+        } else if ("OBJET".equals(categoryName)) {
+            return new String[]{"table", "computer"};
+        } else if ("CELEBRITE".equals(categoryName)) {
+            return new String[]{"napoleon", "einstein"};
+        } else {
+            return new String[]{"test", "word"};
+        }
     }
     
     /**
@@ -232,30 +255,36 @@ public class BackendTestRunner {
      * In a real game, this would be user input.
      */
     private String generateTestWordForLetter(String letter, Category category) {
-        // Simple test word generation - in real game this comes from user
-        return switch (category) {
-            case ANIMAL -> letter.equals("A") ? "ant" : 
-                          letter.equals("B") ? "bear" :
-                          letter.equals("C") ? "cat" :
-                          letter.equals("M") ? "mouse" :
-                          letter.equals("P") ? "pig" : "animal";
-            case PAYS -> letter.equals("A") ? "australia" :
-                        letter.equals("B") ? "brazil" :
-                        letter.equals("C") ? "canada" :
-                        letter.equals("M") ? "mexico" :
-                        letter.equals("P") ? "poland" : "country";
-            case VILLE -> letter.equals("A") ? "amsterdam" :
-                         letter.equals("B") ? "berlin" :
-                         letter.equals("C") ? "chicago" :
-                         letter.equals("M") ? "madrid" :
-                         letter.equals("P") ? "paris" : "city";
-            case FRUIT -> letter.equals("A") ? "apple" :
-                         letter.equals("B") ? "banana" :
-                         letter.equals("C") ? "cherry" :
-                         letter.equals("M") ? "mango" :
-                         letter.equals("P") ? "peach" : "fruit";
-            default -> "test" + letter.toLowerCase();
-        };
+        if (category == null) return "test" + letter.toLowerCase();
+        
+        String categoryName = category.name();
+        if ("ANIMAL".equals(categoryName)) {
+            return letter.equals("A") ? "ant" : 
+                   letter.equals("B") ? "bear" :
+                   letter.equals("C") ? "cat" :
+                   letter.equals("M") ? "mouse" :
+                   letter.equals("P") ? "pig" : "animal";
+        } else if ("PAYS".equals(categoryName)) {
+            return letter.equals("A") ? "australia" :
+                   letter.equals("B") ? "brazil" :
+                   letter.equals("C") ? "canada" :
+                   letter.equals("M") ? "mexico" :
+                   letter.equals("P") ? "poland" : "country";
+        } else if ("VILLE".equals(categoryName)) {
+            return letter.equals("A") ? "amsterdam" :
+                   letter.equals("B") ? "berlin" :
+                   letter.equals("C") ? "chicago" :
+                   letter.equals("M") ? "madrid" :
+                   letter.equals("P") ? "paris" : "city";
+        } else if ("FRUIT".equals(categoryName)) {
+            return letter.equals("A") ? "apple" :
+                   letter.equals("B") ? "banana" :
+                   letter.equals("C") ? "cherry" :
+                   letter.equals("M") ? "mango" :
+                   letter.equals("P") ? "peach" : "fruit";
+        } else {
+            return "test" + letter.toLowerCase();
+        }
     }
     
     /**

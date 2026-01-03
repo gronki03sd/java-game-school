@@ -547,3 +547,151 @@
     -fx-padding: 8 12;
     -fx-background-radius: 6;
 }
+
+/* ========================================
+   CATEGORY MANAGEMENT
+   ======================================== */
+.header-section {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #e8ecef;
+    -fx-border-width: 0 0 1 0;
+}
+
+.page-title {
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2d3436;
+}
+
+.form-section {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 12;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.06), 15, 0, 0, 3);
+}
+
+.table-section {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 12;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.06), 15, 0, 0, 3);
+}
+
+.form-section .label,
+.table-section .label {
+    -fx-font-weight: 600;
+    -fx-text-fill: #2d3436;
+}
+
+/* Status labels */
+.status-success {
+    -fx-text-fill: #00b894;
+    -fx-font-weight: bold;
+}
+
+.status-error {
+    -fx-text-fill: #e17055;
+    -fx-font-weight: bold;
+}
+
+/* Table styling */
+.table-view {
+    -fx-background-color: transparent;
+    -fx-background-radius: 8;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: #f8f9fa;
+    -fx-background-radius: 8 8 0 0;
+}
+
+.table-view .column-header {
+    -fx-background-color: transparent;
+    -fx-text-fill: #636e72;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+}
+
+.table-view .table-cell {
+    -fx-text-fill: #2d3436;
+    -fx-alignment: CENTER_LEFT;
+}
+
+.table-row-cell:selected {
+    -fx-background-color: rgba(78, 204, 163, 0.1);
+    -fx-background-insets: 0;
+}
+
+.table-row-cell:hover {
+    -fx-background-color: rgba(78, 204, 163, 0.05);
+    -fx-background-insets: 0;
+}
+
+/* Button variants for category management */
+.button-primary {
+    -fx-background-color: #4ecca3;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-padding: 8 16;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+
+.button-primary:hover {
+    -fx-background-color: #45b393;
+}
+
+.button-primary:disabled {
+    -fx-background-color: #bdc3c7;
+    -fx-opacity: 0.6;
+}
+
+.button-secondary {
+    -fx-background-color: #ddd;
+    -fx-text-fill: #636e72;
+    -fx-font-weight: bold;
+    -fx-padding: 8 16;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+
+.button-secondary:hover {
+    -fx-background-color: #ccc;
+}
+
+.button-danger {
+    -fx-background-color: #e17055;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-padding: 6 12;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+    -fx-font-size: 11px;
+}
+
+.button-danger:hover {
+    -fx-background-color: #d63031;
+}
+
+/* Form controls */
+.text-field, .text-area {
+    -fx-background-color: white;
+    -fx-border-color: #ddd;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 8 12;
+    -fx-font-size: 14px;
+}
+
+.text-field:focused, .text-area:focused {
+    -fx-border-color: #4ecca3;
+    -fx-effect: dropshadow(gaussian, rgba(78, 204, 163, 0.3), 8, 0, 0, 0);
+}
+
+.text-area {
+    -fx-background-insets: 0;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+}
+
+.text-area .content {
+    -fx-background-color: transparent;
+}

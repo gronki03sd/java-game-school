@@ -13,6 +13,7 @@ import com.baccalaureat.model.GameSession;
 import com.baccalaureat.model.ValidationResult;
 import com.baccalaureat.model.ValidationStatus;
 import com.baccalaureat.service.ValidationService;
+import com.baccalaureat.service.CategoryService;
 import javafx.animation.KeyFrame;
 import javafx.animation.ScaleTransition;
 import javafx.animation.Timeline;
@@ -75,8 +76,9 @@ public class GameController {
     @FXML private ProgressBar timerProgress;
 
     // Backend validation service - coordinates full validation pipeline with caching
+    private final CategoryService categoryService = new CategoryService();
     private final ValidationService validationService = new ValidationService();
-    private final CategorizationEngine categorizationEngine = new CategorizationEngine();
+    private final CategorizationEngine categorizationEngine = new CategorizationEngine(categoryService);
     private GameSession session;
     private final Map<Category, TextField> inputFields = new HashMap<>();
     private final Map<Category, Label> statusLabels = new HashMap<>();

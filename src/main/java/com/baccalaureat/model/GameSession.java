@@ -1,7 +1,8 @@
 package com.baccalaureat.model;
 
+import com.baccalaureat.service.CategoryService;
+
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -37,18 +38,20 @@ public class GameSession {
     private List<Category> categories;
     private List<String> usedLetters;
     private final Difficulty difficulty;
+    private final CategoryService categoryService;
 
     public GameSession() {
         this.difficulty = selectedDifficulty;
         this.currentScore = 0;
         this.currentRound = 1;
         this.usedLetters = new ArrayList<>();
+        this.categoryService = new CategoryService();
         selectCategories();
         generateRandomLetter();
     }
 
     private void selectCategories() {
-        List<Category> allCategories = new ArrayList<>(Arrays.asList(Category.values()));
+        List<Category> allCategories = new ArrayList<>(categoryService.getEnabledCategories());
         Collections.shuffle(allCategories);
         this.categories = allCategories.subList(0, Math.min(difficulty.getCategoryCount(), allCategories.size()));
     }

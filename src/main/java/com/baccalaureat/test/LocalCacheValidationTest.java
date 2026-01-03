@@ -4,9 +4,12 @@ import com.baccalaureat.ai.LocalCacheValidator;
 import com.baccalaureat.ai.CategorizationEngine;
 import com.baccalaureat.service.ValidationService;
 import com.baccalaureat.service.CacheService;
+import com.baccalaureat.service.CategoryService;
 import com.baccalaureat.model.Category;
 import com.baccalaureat.model.ValidationResult;
 import com.baccalaureat.model.ValidationStatus;
+
+import java.util.Optional;
 
 /**
  * Test for STEP 1: Local database cache validation implementation.
@@ -19,6 +22,8 @@ import com.baccalaureat.model.ValidationStatus;
  */
 public class LocalCacheValidationTest {
     
+    private static final CategoryService categoryService = new CategoryService();
+    
     public static void main(String[] args) {
         System.out.println("=== LOCAL CACHE VALIDATION TEST (STEP 1) ===\n");
         
@@ -26,10 +31,15 @@ public class LocalCacheValidationTest {
         CacheService cacheService = new CacheService();
         LocalCacheValidator cacheValidator = new LocalCacheValidator();
         ValidationService validationService = new ValidationService();
-        CategorizationEngine engine = new CategorizationEngine();
+        CategorizationEngine engine = new CategorizationEngine(categoryService);
         
         String testWord = "chien";
-        Category testCategory = Category.ANIMAL;
+        Optional<Category> testCategoryOpt = categoryService.findByName("ANIMAL");
+        if (testCategoryOpt.isEmpty()) {
+            System.err.println("ERROR: ANIMAL category not found in database");
+            return;
+        }
+        Category testCategory = testCategoryOpt.get();
         
         System.out.println("1. Pipeline Configuration:");
         System.out.println("   Available validators: " + engine.getAvailableValidators());
@@ -120,9 +130,14 @@ public class LocalCacheValidationTest {
         
         System.out.println("\n6. Testing Different Category (cache miss):");
         
-        Category differentCategory = Category.FRUIT;
+        Optional<Category> differentCategoryOpt = categoryService.findByName("FRUIT");
+        if (differentCategoryOpt.isEmpty()) {
+            System.err.println("ERROR: FRUIT category not found in database");
+            return;
+        }
+        Category differentCategory = differentCategoryOpt.get();
         ValidationResult differentResult = cacheValidator.validate(testWord, differentCategory);
-        System.out.println("   Word: " + testWord + ", Category: " + differentCategory);
+        System.out.println("   Word: " + testWord + ", Category: " + differentCategory.getDisplayName());
         System.out.println("   Result: " + differentResult.getStatus());
         
         if (differentResult.getStatus() == ValidationStatus.UNCERTAIN) {

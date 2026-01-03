@@ -3,6 +3,7 @@ package com.baccalaureat.ai;
 import com.baccalaureat.model.ValidationResult;
 import com.baccalaureat.model.ValidationStatus;
 import com.baccalaureat.model.Category;
+import com.baccalaureat.service.CategoryService;
 
 /**
  * Mock test demonstrating the category validation logic without depending on external APIs.
@@ -15,23 +16,26 @@ public class MockApiTest {
         System.out.println("==================================================");
         System.out.println("Demonstrating category-aware validation logic...\n");
         
+        // Initialize CategoryService for dynamic category lookups
+        CategoryService categoryService = new CategoryService();
+        
         // Create a mock validator that simulates ConceptNet responses
         MockApiCategoryValidator mockValidator = new MockApiCategoryValidator();
         
         // Test cases
-        testValidation(mockValidator, "dog", Category.ANIMAL, true, "Animal word in animal category");
-        testValidation(mockValidator, "elephant", Category.ANIMAL, true, "Animal word in animal category");
-        testValidation(mockValidator, "cat", Category.ANIMAL, true, "Animal word in animal category");
-        testValidation(mockValidator, "dog", Category.FRUIT, false, "Animal word in fruit category - should be invalid");
-        testValidation(mockValidator, "apple", Category.ANIMAL, false, "Fruit word in animal category - should be invalid");
-        testValidation(mockValidator, "france", Category.PAYS, true, "Country word in country category");
-        testValidation(mockValidator, "germany", Category.PAYS, true, "Country word in country category");
-        testValidation(mockValidator, "paris", Category.VILLE, true, "City word in city category");
-        testValidation(mockValidator, "london", Category.VILLE, true, "City word in city category");
-        testValidation(mockValidator, "apple", Category.FRUIT, true, "Fruit word in fruit category");
-        testValidation(mockValidator, "banana", Category.FRUIT, true, "Fruit word in fruit category");
-        testValidation(mockValidator, "", Category.ANIMAL, false, "Empty string test");
-        testValidation(mockValidator, "nonexistentword123", Category.ANIMAL, false, "Non-existent word test");
+        testValidation(mockValidator, "dog", categoryService.findByName("ANIMAL").orElse(null), true, "Animal word in animal category");
+        testValidation(mockValidator, "elephant", categoryService.findByName("ANIMAL").orElse(null), true, "Animal word in animal category");
+        testValidation(mockValidator, "cat", categoryService.findByName("ANIMAL").orElse(null), true, "Animal word in animal category");
+        testValidation(mockValidator, "dog", categoryService.findByName("FRUIT").orElse(null), false, "Animal word in fruit category - should be invalid");
+        testValidation(mockValidator, "apple", categoryService.findByName("ANIMAL").orElse(null), false, "Fruit word in animal category - should be invalid");
+        testValidation(mockValidator, "france", categoryService.findByName("PAYS").orElse(null), true, "Country word in country category");
+        testValidation(mockValidator, "germany", categoryService.findByName("PAYS").orElse(null), true, "Country word in country category");
+        testValidation(mockValidator, "paris", categoryService.findByName("VILLE").orElse(null), true, "City word in city category");
+        testValidation(mockValidator, "london", categoryService.findByName("VILLE").orElse(null), true, "City word in city category");
+        testValidation(mockValidator, "apple", categoryService.findByName("FRUIT").orElse(null), true, "Fruit word in fruit category");
+        testValidation(mockValidator, "banana", categoryService.findByName("FRUIT").orElse(null), true, "Fruit word in fruit category");
+        testValidation(mockValidator, "", categoryService.findByName("ANIMAL").orElse(null), false, "Empty string test");
+        testValidation(mockValidator, "nonexistentword123", categoryService.findByName("ANIMAL").orElse(null), false, "Non-existent word test");
         
         System.out.println("==================================================");
         System.out.println("✅ Mock category validation test completed");
@@ -88,8 +92,11 @@ class MockApiCategoryValidator implements CategoryValidator {
         double confidence = 0.0;
         String explanation = "";
         
-        switch (category) {
-            case ANIMAL:
+        if (category == null) {
+            explanation = "Category not found";
+        } else {
+            String categoryName = category.name();
+            if ("ANIMAL".equals(categoryName)) {
                 if (normalizedWord.equals("dog") || normalizedWord.equals("cat") || normalizedWord.equals("elephant")) {
                     isValid = true;
                     confidence = 0.95;
@@ -99,9 +106,7 @@ class MockApiCategoryValidator implements CategoryValidator {
                     confidence = 0.0;
                     explanation = "Word identified as fruit, not animal";
                 }
-                break;
-                
-            case FRUIT:
+            } else if ("FRUIT".equals(categoryName)) {
                 if (normalizedWord.equals("apple") || normalizedWord.equals("banana")) {
                     isValid = true;
                     confidence = 0.90;
@@ -111,27 +116,20 @@ class MockApiCategoryValidator implements CategoryValidator {
                     confidence = 0.0;
                     explanation = "Word identified as animal, not fruit";
                 }
-                break;
-                
-            case PAYS:
+            } else if ("PAYS".equals(categoryName)) {
                 if (normalizedWord.equals("france") || normalizedWord.equals("germany")) {
                     isValid = true;
                     confidence = 0.92;
                     explanation = "Word identified as country through ConceptNet relationships";
                 }
-                break;
-                
-            case VILLE:
+            } else if ("VILLE".equals(categoryName)) {
                 if (normalizedWord.equals("paris") || normalizedWord.equals("london")) {
                     isValid = true;
                     confidence = 0.88;
                     explanation = "Word identified as city through ConceptNet relationships";
                 }
-                break;
-                
-            default:
-                // Handle other categories
-                break;
+            }
+            // Handle other categories would go here
         }
         
         // Handle unknown words
