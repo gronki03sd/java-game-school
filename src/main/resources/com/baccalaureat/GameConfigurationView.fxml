@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.effect.DropShadow?>
+<?import javafx.collections.FXCollections?>
+<?import java.lang.String?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21.0.2" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.baccalaureat.controller.GameConfigurationController"
+            styleClass="main-menu" stylesheets="@styles.css">
+    
+    <!-- Header -->
+    <top>
+        <VBox alignment="CENTER" spacing="20">
+            <padding>
+                <Insets top="30" right="40" bottom="20" left="40"/>
+            </padding>
+            
+            <Label text="Configuration de la Partie" styleClass="game-title"/>
+            <Label fx:id="modeLabel" text="Mode Solo" styleClass="subtitle"/>
+        </VBox>
+    </top>
+    
+    <!-- Main Configuration -->
+    <center>
+        <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;">
+            <VBox spacing="30" alignment="TOP_CENTER">
+                <padding>
+                    <Insets top="20" right="40" bottom="20" left="40"/>
+                </padding>
+                
+                <!-- Categories Section -->
+                <VBox spacing="15" alignment="CENTER" styleClass="config-section">
+                    <Label text="📚 Catégories" styleClass="section-title"/>
+                    <HBox spacing="15" alignment="CENTER">
+                        <Button fx:id="manageCategoriesButton" text="⚙️ Gérer les Catégories" 
+                                styleClass="secondary-button" onAction="#handleManageCategories"/>
+                        <Label fx:id="categoryCountLabel" text="0 catégories sélectionnées" 
+                               styleClass="info-text"/>
+                    </HBox>
+                    <FlowPane fx:id="categoryChipsContainer" alignment="CENTER" hgap="10" vgap="10"/>
+                </VBox>
+                
+                <!-- Game Settings Section -->
+                <VBox spacing="20" alignment="CENTER" styleClass="config-section">
+                    <Label text="⚙️ Paramètres de Jeu" styleClass="section-title"/>
+                    
+                    <!-- Number of Rounds -->
+                    <VBox spacing="10" alignment="CENTER">
+                        <Label text="Nombre de Manches" styleClass="config-label"/>
+                        <HBox spacing="15" alignment="CENTER">
+                            <Slider fx:id="roundsSlider" min="1" max="10" value="5" showTickLabels="true" 
+                                    showTickMarks="true" majorTickUnit="1" minorTickCount="0" 
+                                    snapToTicks="true" prefWidth="200"/>
+                            <Label fx:id="roundsValueLabel" text="5" styleClass="config-value"/>
+                        </HBox>
+                    </VBox>
+                    
+                    <!-- Round Duration -->
+                    <VBox spacing="10" alignment="CENTER">
+                        <Label text="Durée par Manche" styleClass="config-label"/>
+                        <ComboBox fx:id="durationComboBox" prefWidth="200" styleClass="config-combo">
+                            <items>
+                                <FXCollections fx:factory="observableArrayList">
+                                    <String fx:value="1 minute (60s)"/>
+                                    <String fx:value="1m 30s (90s)"/>
+                                    <String fx:value="2 minutes (120s)"/>
+                                    <String fx:value="3 minutes (180s)"/>
+                                    <String fx:value="4 minutes (240s)"/>
+                                </FXCollections>
+                            </items>
+                        </ComboBox>
+                    </VBox>
+                </VBox>
+                
+                <!-- Player Configuration Section -->
+                <VBox fx:id="playerConfigSection" spacing="15" alignment="CENTER" styleClass="config-section">
+                    <Label fx:id="playerSectionTitle" text="👤 Configuration Joueur" styleClass="section-title"/>
+                    
+                    <!-- Solo Mode Player -->
+                    <VBox fx:id="soloPlayerConfig" spacing="10" alignment="CENTER">
+                        <Label text="Nom du Joueur" styleClass="config-label"/>
+                        <TextField fx:id="soloNicknameField" promptText="Entrez votre nom..." 
+                                   prefWidth="250" styleClass="config-input"/>
+                    </VBox>
+                    
+                    <!-- Local Mode Players -->
+                    <VBox fx:id="localPlayerConfig" spacing="15" alignment="CENTER" visible="false" managed="false">
+                        <VBox spacing="10" alignment="CENTER">
+                            <Label text="Nombre de Joueurs" styleClass="config-label"/>
+                            <HBox spacing="15" alignment="CENTER">
+                                <Slider fx:id="playersCountSlider" min="2" max="6" value="2" showTickLabels="true" 
+                                        showTickMarks="true" majorTickUnit="1" minorTickCount="0" 
+                                        snapToTicks="true" prefWidth="150"/>
+                                <Label fx:id="playersCountLabel" text="2" styleClass="config-value"/>
+                            </HBox>
+                        </VBox>
+                        <VBox fx:id="nicknamesContainer" spacing="10" alignment="CENTER"/>
+                    </VBox>
+                    
+                    <!-- Distant Mode Placeholder -->
+                    <VBox fx:id="distantPlayerConfig" spacing="10" alignment="CENTER" visible="false" managed="false">
+                        <Label text="🚧 À venir" styleClass="config-placeholder"/>
+                        <Label text="Le mode distant sera disponible prochainement" styleClass="info-text"/>
+                    </VBox>
+                </VBox>
+            </VBox>
+        </ScrollPane>
+    </center>
+    
+    <!-- Bottom Actions -->
+    <bottom>
+        <HBox spacing="20" alignment="CENTER" styleClass="header-bar">
+            <padding>
+                <Insets top="20" right="40" bottom="20" left="40"/>
+            </padding>
+            
+            <Button fx:id="backButton" text="← Retour" styleClass="secondary-button"
+                    onAction="#handleBack"/>
+            
+            <Region HBox.hgrow="ALWAYS"/>
+            
+            <Label fx:id="validationMessageLabel" text="" styleClass="error-message" visible="false"/>
+            
+            <Button fx:id="startGameButton" text="🎮 Démarrer la Partie" styleClass="action-button"
+                    onAction="#handleStartGame" disable="true"/>
+        </HBox>
+    </bottom>
+</BorderPane>

@@ -3,32 +3,10 @@ package com.baccalaureat.model;
 import com.baccalaureat.service.CategoryService;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
 public class GameSession {
-    public enum Difficulty {
-        EASY(90, 4, 3),      // 90 seconds, 4 categories, 3 rounds
-        MEDIUM(60, 6, 5),    // 60 seconds, 6 categories, 5 rounds
-        HARD(45, 8, 7);      // 45 seconds, 8 categories, 7 rounds
-
-        private final int timeSeconds;
-        private final int categoryCount;
-        private final int totalRounds;
-
-        Difficulty(int timeSeconds, int categoryCount, int totalRounds) {
-            this.timeSeconds = timeSeconds;
-            this.categoryCount = categoryCount;
-            this.totalRounds = totalRounds;
-        }
-
-        public int getTimeSeconds() { return timeSeconds; }
-        public int getCategoryCount() { return categoryCount; }
-        public int getTotalRounds() { return totalRounds; }
-    }
-
-    private static Difficulty selectedDifficulty = Difficulty.MEDIUM;
     private static int highScore = 0;
     private static int gamesPlayed = 0;
 
@@ -37,23 +15,35 @@ public class GameSession {
     private int currentRound;
     private List<Category> categories;
     private List<String> usedLetters;
-    private final Difficulty difficulty;
+    private final GameConfig gameConfig;
     private final CategoryService categoryService;
 
     public GameSession() {
-        this.difficulty = selectedDifficulty;
+        // Default constructor for backward compatibility
+        this.gameConfig = new GameConfig();
         this.currentScore = 0;
         this.currentRound = 1;
         this.usedLetters = new ArrayList<>();
         this.categoryService = new CategoryService();
-        selectCategories();
+        setupDefaultCategories();
+        generateRandomLetter();
+    }
+    
+    public GameSession(GameConfig config) {
+        this.gameConfig = config;
+        this.currentScore = 0;
+        this.currentRound = 1;
+        this.usedLetters = new ArrayList<>();
+        this.categoryService = new CategoryService();
+        this.categories = new ArrayList<>(config.getSelectedCategories());
         generateRandomLetter();
     }
 
-    private void selectCategories() {
+    private void setupDefaultCategories() {
+        // For backward compatibility, use enabled categories
         List<Category> allCategories = new ArrayList<>(categoryService.getEnabledCategories());
-        Collections.shuffle(allCategories);
-        this.categories = allCategories.subList(0, Math.min(difficulty.getCategoryCount(), allCategories.size()));
+        this.categories = allCategories.subList(0, Math.min(6, allCategories.size()));
+        gameConfig.setSelectedCategories(this.categories);
     }
 
     public void generateRandomLetter() {
@@ -69,7 +59,7 @@ public class GameSession {
     }
 
     public boolean nextRound() {
-        if (currentRound >= difficulty.getTotalRounds()) {
+        if (currentRound >= gameConfig.getNumberOfRounds()) {
             endGame();
             return false;
         }
@@ -98,11 +88,11 @@ public class GameSession {
     }
 
     public int getTotalRounds() {
-        return difficulty.getTotalRounds();
+        return gameConfig.getNumberOfRounds();
     }
 
     public int getTimeSeconds() {
-        return difficulty.getTimeSeconds();
+        return gameConfig.getRoundDurationSeconds();
     }
 
     public List<Category> getCategories() {
@@ -113,19 +103,11 @@ public class GameSession {
         this.currentScore += points;
     }
 
-    public Difficulty getDifficulty() {
-        return difficulty;
+    public GameConfig getGameConfig() {
+        return gameConfig;
     }
 
-    // Static methods for settings
-    public static void setDifficulty(Difficulty difficulty) {
-        selectedDifficulty = difficulty;
-    }
-
-    public static Difficulty getSelectedDifficulty() {
-        return selectedDifficulty;
-    }
-
+    // Static methods for settings (for backward compatibility)
     public static int getHighScore() {
         return highScore;
     }

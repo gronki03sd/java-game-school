@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.baccalaureat.model.GameSession;
+import com.baccalaureat.model.GameConfig;
 import com.baccalaureat.model.Player;
 
 import javafx.event.ActionEvent;
@@ -14,47 +14,42 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import javafx.scene.control.ToggleButton;
-import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
+/**
+ * Controller for Multiplayer Lobby.
+ * NOTE: This controller is now deprecated as multiplayer setup
+ * is handled by the new GameConfigurationController.
+ * This is kept for backward compatibility and will redirect users
+ * to the new configuration system.
+ */
 public class MultiplayerLobbyController {
     private boolean darkMode = false;
     @FXML private TextField playerNameInput;
     @FXML private FlowPane playersPane;
     @FXML private Button startGameButton;
     @FXML private Label noticeLabel;
-    @FXML private ToggleButton easyBtn;
-    @FXML private ToggleButton mediumBtn;
-    @FXML private ToggleButton hardBtn;
 
     private final List<Player> players = new ArrayList<>();
-    private ToggleGroup difficultyGroup;
     private static List<Player> gamePlayers;
 
     @FXML
     private void initialize() {
-        // Setup toggle group for difficulty
-        difficultyGroup = new ToggleGroup();
-        easyBtn.setToggleGroup(difficultyGroup);
-        mediumBtn.setToggleGroup(difficultyGroup);
-        hardBtn.setToggleGroup(difficultyGroup);
-
-        // Set default selection
-        switch (GameSession.getSelectedDifficulty()) {
-            case EASY -> easyBtn.setSelected(true);
-            case MEDIUM -> mediumBtn.setSelected(true);
-            case HARD -> hardBtn.setSelected(true);
+        // Show deprecation notice
+        if (noticeLabel != null) {
+            noticeLabel.setText("Cette interface sera bientôt remplacée par la nouvelle configuration de jeu.");
         }
-        updateSelectedStyle();
-
+        
         // Enter key to add player
-        playerNameInput.setOnAction(e -> handleAddPlayer());
+        if (playerNameInput != null) {
+            playerNameInput.setOnAction(e -> handleAddPlayer());
+        }
         
         updateUI();
     }
@@ -68,15 +63,19 @@ public class MultiplayerLobbyController {
         }
         
         if (players.size() >= 8) {
-            noticeLabel.setText("Maximum 8 joueurs!");
-            noticeLabel.setStyle("-fx-text-fill: #ff6b6b; -fx-font-size: 12px;");
+            if (noticeLabel != null) {
+                noticeLabel.setText("Maximum 8 joueurs!");
+                noticeLabel.setStyle("-fx-text-fill: #ff6b6b; -fx-font-size: 12px;");
+            }
             return;
         }
 
         // Check for duplicate names
         if (players.stream().anyMatch(p -> p.getName().equalsIgnoreCase(name))) {
-            noticeLabel.setText("Ce nom existe déjà!");
-            noticeLabel.setStyle("-fx-text-fill: #ff6b6b; -fx-font-size: 12px;");
+            if (noticeLabel != null) {
+                noticeLabel.setText("Ce nom existe déjà!");
+                noticeLabel.setStyle("-fx-text-fill: #ff6b6b; -fx-font-size: 12px;");
+            }
             shakeInput();
             return;
         }
@@ -88,14 +87,16 @@ public class MultiplayerLobbyController {
     }
 
     private void shakeInput() {
-        playerNameInput.setStyle("-fx-border-color: #ff6b6b; -fx-border-width: 2;");
-        new Thread(() -> {
-            try {
-                Thread.sleep(500);
-                javafx.application.Platform.runLater(() -> 
-                    playerNameInput.setStyle(""));
-            } catch (InterruptedException ignored) {}
-        }).start();
+        if (playerNameInput != null) {
+            playerNameInput.setStyle("-fx-border-color: #ff6b6b; -fx-border-width: 2;");
+            new Thread(() -> {
+                try {
+                    Thread.sleep(500);
+                    javafx.application.Platform.runLater(() -> 
+                        playerNameInput.setStyle(""));
+                } catch (InterruptedException ignored) {}
+            }).start();
+        }
     }
 
     private void removePlayer(Player player) {
@@ -104,31 +105,41 @@ public class MultiplayerLobbyController {
     }
 
     private void updateUI() {
-        playersPane.getChildren().clear();
+        if (playersPane != null) {
+            playersPane.getChildren().clear();
 
-        // Create player cards
-        String[] colors = {"#e94560", "#4ecca3", "#ffd93d", "#6c5ce7", "#00cec9", "#fd79a8", "#a29bfe", "#ff7675"};
-        int colorIndex = 0;
+            // Create player cards
+            String[] colors = {"#e94560", "#4ecca3", "#ffd93d", "#6c5ce7", "#00cec9", "#fd79a8", "#a29bfe", "#ff7675"};
+            int colorIndex = 0;
 
-        for (Player player : players) {
-            VBox card = createPlayerCard(player, colors[colorIndex % colors.length]);
-            playersPane.getChildren().add(card);
-            colorIndex++;
+            for (Player player : players) {
+                VBox card = createPlayerCard(player, colors[colorIndex % colors.length]);
+                playersPane.getChildren().add(card);
+                colorIndex++;
+            }
         }
 
+        updateStartButton();
+    }
+
+    private void updateStartButton() {
         // Update start button and notice
         boolean canStart = players.size() >= 2;
-        startGameButton.setDisable(!canStart);
+        if (startGameButton != null) {
+            startGameButton.setDisable(!canStart);
+        }
 
-        if (players.isEmpty()) {
-            noticeLabel.setText("Ajoutez au moins 2 joueurs pour commencer");
-            noticeLabel.setStyle("-fx-text-fill: #cccccc; -fx-font-size: 12px;");
-        } else if (players.size() == 1) {
-            noticeLabel.setText("Encore 1 joueur requis");
-            noticeLabel.setStyle("-fx-text-fill: #ffd93d; -fx-font-size: 12px;");
-        } else {
-            noticeLabel.setText("✓ " + players.size() + " joueurs prêts!");
-            noticeLabel.setStyle("-fx-text-fill: #4ecca3; -fx-font-size: 12px;");
+        if (noticeLabel != null) {
+            if (players.isEmpty()) {
+                noticeLabel.setText("Ajoutez au moins 2 joueurs pour commencer");
+                noticeLabel.setStyle("-fx-text-fill: #cccccc; -fx-font-size: 12px;");
+            } else if (players.size() == 1) {
+                noticeLabel.setText("Encore 1 joueur requis");
+                noticeLabel.setStyle("-fx-text-fill: #ffd93d; -fx-font-size: 12px;");
+            } else {
+                noticeLabel.setText("✓ " + players.size() + " joueurs prêts!");
+                noticeLabel.setStyle("-fx-text-fill: #4ecca3; -fx-font-size: 12px;");
+            }
         }
     }
 
@@ -189,52 +200,49 @@ public class MultiplayerLobbyController {
     }
 
     @FXML
-    private void handleDifficultyChange(ActionEvent event) {
-        ToggleButton source = (ToggleButton) event.getSource();
-        if (source.isSelected()) {
-            String difficulty = (String) source.getUserData();
-            GameSession.setDifficulty(GameSession.Difficulty.valueOf(difficulty));
-            updateSelectedStyle();
-        } else {
-            source.setSelected(true);
-        }
-    }
-
-    private void updateSelectedStyle() {
-        easyBtn.getStyleClass().remove("difficulty-button-selected");
-        mediumBtn.getStyleClass().remove("difficulty-button-selected");
-        hardBtn.getStyleClass().remove("difficulty-button-selected");
-
-        if (easyBtn.isSelected()) easyBtn.getStyleClass().add("difficulty-button-selected");
-        if (mediumBtn.isSelected()) mediumBtn.getStyleClass().add("difficulty-button-selected");
-        if (hardBtn.isSelected()) hardBtn.getStyleClass().add("difficulty-button-selected");
-    }
-
-    @FXML
     private void handleStartGame() {
         if (players.size() < 2) return;
 
-        gamePlayers = new ArrayList<>(players);
+        // Redirect to new game configuration system instead of direct game launch
         try {
             Stage stage = (Stage) startGameButton.getScene().getWindow();
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/MultiplayerGame.fxml"));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/GameConfigurationView.fxml"));
             Parent root = loader.load();
             Scene scene = new Scene(root, 1000, 750);
-            // Pass theme
+            
             if (darkMode) {
                 scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-dark.css").toExternalForm());
             } else {
                 scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-light.css").toExternalForm());
             }
-            // Set darkMode in MultiplayerGameController
+            
+            // Configure the GameConfigurationController with local mode and players
             Object controller = loader.getController();
-            if (controller instanceof com.baccalaureat.controller.MultiplayerGameController mgc) {
-                mgc.setDarkMode(darkMode);
+            if (controller instanceof GameConfigurationController gcc) {
+                gcc.setDarkMode(darkMode);
+                gcc.setGameMode(GameConfig.GameMode.LOCAL);
+                
+                // Pre-populate with existing players
+                List<String> playerNames = new ArrayList<>();
+                for (Player player : players) {
+                    playerNames.add(player.getName());
+                }
+                // Note: The GameConfigurationController would need a method to accept pre-configured players
+                // This is a design improvement for the future
             }
+            
             stage.setScene(scene);
             stage.show();
+            
         } catch (IOException e) {
             e.printStackTrace();
+            
+            // Fallback: Show message about using new configuration
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Nouvelle Interface");
+            alert.setHeaderText("Configuration Améliorée");
+            alert.setContentText("Veuillez utiliser le nouveau système de configuration de partie depuis le menu principal (Mode Multijoueur).");
+            alert.showAndWait();
         }
     }
 
@@ -245,9 +253,24 @@ public class MultiplayerLobbyController {
     @FXML
     private void handleBackToMenu() {
         try {
-            Stage stage = (Stage) playersPane.getScene().getWindow();
-            Parent root = FXMLLoader.load(getClass().getResource("/com/baccalaureat/MainMenu.fxml"));
-            stage.setScene(new Scene(root, 900, 700));
+            Stage stage = (Stage) (playersPane != null ? playersPane.getScene() : startGameButton.getScene()).getWindow();
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/MainMenu.fxml"));
+            Parent root = loader.load();
+            Scene scene = new Scene(root, 900, 700);
+            
+            if (darkMode) {
+                scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-dark.css").toExternalForm());
+            } else {
+                scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-light.css").toExternalForm());
+            }
+            
+            // Configure the MainMenuController
+            Object controller = loader.getController();
+            if (controller instanceof MainMenuController mmc) {
+                mmc.setDarkMode(darkMode);
+            }
+            
+            stage.setScene(scene);
             stage.show();
         } catch (IOException e) {
             e.printStackTrace();

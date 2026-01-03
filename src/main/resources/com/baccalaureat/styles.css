@@ -695,3 +695,82 @@
 .text-area .content {
     -fx-background-color: transparent;
 }
+
+/* ========================================
+   GAME CONFIGURATION
+   ======================================== */
+.config-section {
+    -fx-background-color: white;
+    -fx-padding: 25;
+    -fx-background-radius: 15;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.08), 15, 0, 0, 5);
+}
+
+.config-label {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2d3436;
+}
+
+.config-value {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4ecca3;
+    -fx-min-width: 30px;
+}
+
+.config-input {
+    -fx-background-color: white;
+    -fx-border-color: #ddd;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 12 15;
+    -fx-font-size: 14px;
+}
+
+.config-input:focused {
+    -fx-border-color: #4ecca3;
+    -fx-effect: dropshadow(gaussian, rgba(78, 204, 163, 0.3), 8, 0, 0, 0);
+}
+
+.config-combo {
+    -fx-background-color: white;
+    -fx-border-color: #ddd;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-font-size: 14px;
+}
+
+.config-combo:focused {
+    -fx-border-color: #4ecca3;
+    -fx-effect: dropshadow(gaussian, rgba(78, 204, 163, 0.3), 8, 0, 0, 0);
+}
+
+.category-chip {
+    -fx-background-color: #f0f4f8;
+    -fx-text-fill: #4ecca3;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 6 12;
+    -fx-background-radius: 20;
+    -fx-border-color: #4ecca3;
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+}
+
+.config-placeholder {
+    -fx-font-size: 24px;
+    -fx-text-fill: #999;
+}
+
+.info-text {
+    -fx-font-size: 14px;
+    -fx-text-fill: #636e72;
+    -fx-font-style: italic;
+}
+
+.error-message {
+    -fx-text-fill: #e74c3c;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}

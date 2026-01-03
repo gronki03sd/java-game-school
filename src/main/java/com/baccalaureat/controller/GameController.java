@@ -9,6 +9,7 @@ import java.util.Set;
 
 import com.baccalaureat.ai.CategorizationEngine;
 import com.baccalaureat.model.Category;
+import com.baccalaureat.model.GameConfig;
 import com.baccalaureat.model.GameSession;
 import com.baccalaureat.model.ValidationResult;
 import com.baccalaureat.model.ValidationStatus;
@@ -117,6 +118,26 @@ public class GameController {
 
     public void setDarkMode(boolean dark) {
         this.darkMode = dark;
+    }
+    
+    public void configureGame(GameConfig config) {
+        session = new GameSession(config);
+        totalSeconds = session.getTimeSeconds();
+        remainingSeconds = totalSeconds;
+        
+        // Clear existing UI if any
+        categoriesContainer.getChildren().clear();
+        inputFields.clear();
+        statusLabels.clear();
+        confidenceLabels.clear();
+        categoryCards.clear();
+        cachedResults.clear();
+        usedWordsThisRound.clear();
+        
+        // Setup UI with new configuration
+        setupUI();
+        startCountdown();
+        animateLetterReveal();
     }
 
     private void setupUI() {

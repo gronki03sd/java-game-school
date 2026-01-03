@@ -50,19 +50,6 @@
     <!-- Spacer -->
     <Region VBox.vgrow="ALWAYS" maxHeight="30"/>
     
-    <!-- Difficulty Selection -->
-    <VBox alignment="CENTER" spacing="10">
-        <Label text="Difficulté" styleClass="section-title"/>
-        <HBox spacing="10" alignment="CENTER">
-            <ToggleButton fx:id="easyBtn" text="🌱 Facile" styleClass="difficulty-button" 
-                         onAction="#handleDifficultyChange" userData="EASY"/>
-            <ToggleButton fx:id="mediumBtn" text="⚡ Normal" styleClass="difficulty-button" 
-                         onAction="#handleDifficultyChange" userData="MEDIUM"/>
-            <ToggleButton fx:id="hardBtn" text="🔥 Difficile" styleClass="difficulty-button" 
-                         onAction="#handleDifficultyChange" userData="HARD"/>
-        </HBox>
-    </VBox>
-    
         <!-- Main Actions -->
         <VBox spacing="15" alignment="CENTER">
         <Button fx:id="startSoloButton" text="👤  Mode Solo" 

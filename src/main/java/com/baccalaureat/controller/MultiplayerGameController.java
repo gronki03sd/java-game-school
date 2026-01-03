@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.Random;
 
 import com.baccalaureat.model.Category;
+import com.baccalaureat.model.GameConfig;
 import com.baccalaureat.model.GameSession;
 import com.baccalaureat.model.Player;
 import com.baccalaureat.model.ValidationResult;
@@ -101,6 +102,27 @@ public class MultiplayerGameController {
 
     public void setDarkMode(boolean dark) {
         this.darkMode = dark;
+    }
+    
+    public void configureGame(GameConfig config) {
+        // Convert GameConfig to list of players
+        List<Player> configuredPlayers = new ArrayList<>();
+        for (String nickname : config.getPlayerNicknames()) {
+            configuredPlayers.add(new Player(nickname));
+        }
+        
+        // Store configuration settings
+        this.players = configuredPlayers;
+        this.categories = new ArrayList<>(config.getSelectedCategories());
+        this.totalRounds = config.getNumberOfRounds();
+        this.totalSeconds = config.getRoundDurationSeconds();
+        this.remainingSeconds = totalSeconds;
+        
+        // Setup the game
+        generateNewLetter();
+        setupUI();
+        setupScoresBar();
+        startPlayerTurn();
     }
 
     private void generateNewLetter() {
