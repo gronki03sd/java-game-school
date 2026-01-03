@@ -3,3 +3,4 @@ target/
 
 # Local DB
 *.db
+baccalaureat.db
