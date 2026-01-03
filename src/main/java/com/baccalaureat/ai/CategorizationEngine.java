@@ -25,8 +25,18 @@ public class CategorizationEngine {
         validators = new ArrayList<>();
         validators.add(new LocalCacheValidator());              // STEP 1: Local database cache
         validators.add(new FixedListValidator());            // STEP 2: Deterministic validation  
-        validators.add(new WebConfigurableValidator(categoryService)); // STEP 3: Web API validation
-        validators.add(new SemanticAiValidator());              // STEP 4: AI validation (future)
+        
+        // STEP 3: AI validation with N8n webhook (moved before WebAPI as requested)
+        try {
+            N8nAIClient n8nAIClient = new N8nAIClient();
+            AICategoryValidator aiValidator = new AICategoryValidator(n8nAIClient, 0.7, true);
+            validators.add(aiValidator);
+        } catch (Exception e) {
+            System.err.println("[CategorizationEngine] Warning: N8n AI validation disabled - " + e.getMessage());
+            // Continue without AI validator if N8n client fails to initialize
+        }
+        
+        validators.add(new WebConfigurableValidator(categoryService)); // STEP 4: Web API validation
     }
     
     /**

@@ -85,17 +85,17 @@ class ValidationPipelineIntegrationTest {
             .orElseThrow(() -> new AssertionError("ANIMAL predefined category should exist"));
 
         // Create FixedListValidator for the ANIMAL category
-        FixedListValidator validator = new FixedListValidator(animalCategory);
+        FixedListValidator validator = new FixedListValidator();
         
         // Test with known animal words
         ValidationResult dogResult = validator.validate("chien", animalCategory);
         assertNotNull(dogResult, "Validation result should not be null");
         
-        // The result should be either VALID (if word is in fixed list) or UNKNOWN (to pass to next validator)
+        // The result should be either VALID (if word is in fixed list) or UNCERTAIN (to pass to next validator)
         assertTrue(
             dogResult.getStatus() == ValidationStatus.VALID || 
-            dogResult.getStatus() == ValidationStatus.UNKNOWN,
-            "FixedListValidator should return VALID or UNKNOWN for animal words"
+            dogResult.getStatus() == ValidationStatus.UNCERTAIN,
+            "FixedListValidator should return VALID or UNCERTAIN for animal words"
         );
         
         // Test with clearly non-animal word
@@ -121,7 +121,7 @@ class ValidationPipelineIntegrationTest {
         // Test WebConfigurableValidator initialization with database categories
         for (Category category : predefinedCategories) {
             assertDoesNotThrow(() -> {
-                WebConfigurableValidator validator = new WebConfigurableValidator();
+                WebConfigurableValidator validator = new WebConfigurableValidator(categoryService);
                 // The validator should be able to work with category identifiers
                 assertNotNull(validator, "WebConfigurableValidator should initialize");
             }, "WebConfigurableValidator should accept category: " + category.getName());
@@ -142,13 +142,15 @@ class ValidationPipelineIntegrationTest {
             false  // Not predefined
         );
         
-        Category created = categoryService.createCategory(customCategory);
-        assertNotNull(created, "Custom category should be created");
+        CategoryService.CategoryCreationResult result = categoryService.createCategory(customCategory);
+        assertNotNull(result, "CategoryCreationResult should not be null");
+        assertTrue(result.isSuccess(), "Custom category should be created successfully");
+        Category created = result.getCategory();
         
         // Create validators for the custom category
-        LocalCacheValidator localValidator = new LocalCacheValidator(created);
-        FixedListValidator fixedValidator = new FixedListValidator(created);
-        WebConfigurableValidator webValidator = new WebConfigurableValidator();
+        LocalCacheValidator localValidator = new LocalCacheValidator();
+        FixedListValidator fixedValidator = new FixedListValidator();
+        WebConfigurableValidator webValidator = new WebConfigurableValidator(categoryService);
         
         // All validators should initialize without issues
         assertNotNull(localValidator, "LocalCacheValidator should work with custom categories");
@@ -170,14 +172,14 @@ class ValidationPipelineIntegrationTest {
         assertTrue(
             localResult.getStatus() == ValidationStatus.VALID ||
             localResult.getStatus() == ValidationStatus.INVALID ||
-            localResult.getStatus() == ValidationStatus.UNKNOWN,
+            localResult.getStatus() == ValidationStatus.UNCERTAIN,
             "LocalCacheValidator should return a valid status"
         );
         
         assertTrue(
             fixedResult.getStatus() == ValidationStatus.VALID ||
             fixedResult.getStatus() == ValidationStatus.INVALID ||
-            fixedResult.getStatus() == ValidationStatus.UNKNOWN,
+            fixedResult.getStatus() == ValidationStatus.UNCERTAIN,
             "FixedListValidator should return a valid status"
         );
     }
@@ -194,9 +196,9 @@ class ValidationPipelineIntegrationTest {
 
         // Create the validation pipeline manually to test order
         List<CategoryValidator> validators = List.of(
-            new LocalCacheValidator(testCategory),
-            new FixedListValidator(testCategory),
-            new WebConfigurableValidator()
+            new LocalCacheValidator(),
+            new FixedListValidator(),
+            new WebConfigurableValidator(categoryService)
         );
         
         assertEquals(3, validators.size(), "Should have 3 validators in pipeline");
@@ -244,9 +246,9 @@ class ValidationPipelineIntegrationTest {
         // Test that validators can be created for each predefined category
         for (Category category : predefinedCategories) {
             assertDoesNotThrow(() -> {
-                LocalCacheValidator localValidator = new LocalCacheValidator(category);
-                FixedListValidator fixedValidator = new FixedListValidator(category);
-                WebConfigurableValidator webValidator = new WebConfigurableValidator();
+                LocalCacheValidator localValidator = new LocalCacheValidator();
+                FixedListValidator fixedValidator = new FixedListValidator();
+                WebConfigurableValidator webValidator = new WebConfigurableValidator(categoryService);
                 
                 assertNotNull(localValidator, "LocalCacheValidator should work with " + category.getName());
                 assertNotNull(fixedValidator, "FixedListValidator should work with " + category.getName());
@@ -269,7 +271,8 @@ class ValidationPipelineIntegrationTest {
             false
         );
         
-        Category createdCustom = categoryService.createCategory(customCategory);
+        CategoryService.CategoryCreationResult result = categoryService.createCategory(customCategory);
+        Category createdCustom = result.getCategory();
         
         // Get all categories (predefined + custom)
         List<Category> allCategories = categoryService.getAllCategories();
@@ -289,8 +292,8 @@ class ValidationPipelineIntegrationTest {
         
         // Both should work in validation pipeline
         assertDoesNotThrow(() -> {
-            LocalCacheValidator predefinedValidator = new LocalCacheValidator(predefinedCategory);
-            LocalCacheValidator customValidator = new LocalCacheValidator(createdCustom);
+            LocalCacheValidator predefinedValidator = new LocalCacheValidator();
+            LocalCacheValidator customValidator = new LocalCacheValidator();
             
             ValidationResult predefinedResult = predefinedValidator.validate("chat", predefinedCategory);
             ValidationResult customResult = customValidator.validate("football", createdCustom);

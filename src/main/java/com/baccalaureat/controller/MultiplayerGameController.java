@@ -12,6 +12,7 @@ import com.baccalaureat.model.Category;
 import com.baccalaureat.model.GameSession;
 import com.baccalaureat.model.Player;
 import com.baccalaureat.model.ValidationResult;
+import com.baccalaureat.model.ValidationStatus;
 import com.baccalaureat.service.ValidationService;
 
 import javafx.animation.KeyFrame;
@@ -327,7 +328,8 @@ public class MultiplayerGameController {
             
             if (!startsCorrect) {
                 status.setText("❌");
-                status.setStyle("-fx-text-fill: #ff6b6b; -fx-font-size: 24px;");
+                status.getStyleClass().removeAll("status-valid", "status-invalid", "status-uncertain", "status-pending");
+                status.getStyleClass().add("status-invalid");
                 tf.setDisable(true);
                 continue;
             }
@@ -335,13 +337,11 @@ public class MultiplayerGameController {
             // Delegate validation to service layer
             ValidationResult result = validationService.validateWord(c.name(), word);
             
+            // Apply visual feedback based on validation result
+            applyValidationStatus(result, status);
+            
             if (result.isValid()) {
-                status.setText("✅");
-                status.setStyle("-fx-text-fill: #4ecca3; -fx-font-size: 24px;");
                 points += 2;
-            } else {
-                status.setText("❌");
-                status.setStyle("-fx-text-fill: #ff6b6b; -fx-font-size: 24px;");
             }
 
             tf.setDisable(true);
@@ -354,6 +354,36 @@ public class MultiplayerGameController {
 
         // Show turn result
         showTurnResult(current, points);
+    }
+
+    /**
+     * Apply visual validation status to status label using CSS classes.
+     * This provides consistent visual feedback across single and multiplayer modes.
+     */
+    private void applyValidationStatus(ValidationResult result, Label status) {
+        // Determine if this is a low-confidence valid result
+        boolean isLowConfidenceValid = result.isValid() && result.getConfidence() < 0.85;
+        
+        // Update status icon with nuanced feedback
+        String statusIcon = switch (result.getStatus()) {
+            case VALID -> isLowConfidenceValid ? "⚠️" : "✅";  // Warning for low confidence
+            case INVALID -> "❌"; 
+            case UNCERTAIN -> "❓";
+            case ERROR -> "⚠️";
+        };
+        status.setText(statusIcon);
+        
+        // Update CSS classes for consistent theming
+        status.getStyleClass().removeAll("status-valid", "status-invalid", "status-uncertain", "status-pending");
+        String cssClass;
+        if (result.isValid() && !isLowConfidenceValid) {
+            cssClass = "status-valid";     // Green for high-confidence valid
+        } else if (result.isValid() && isLowConfidenceValid || result.isUncertain()) {
+            cssClass = "status-uncertain"; // Orange for low-confidence valid or uncertain
+        } else {
+            cssClass = "status-invalid";   // Red for invalid/error
+        }
+        status.getStyleClass().add(cssClass);
     }
 
     private void showTurnResult(Player player, int points) {

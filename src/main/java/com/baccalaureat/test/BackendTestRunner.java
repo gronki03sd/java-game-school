@@ -3,8 +3,9 @@ package com.baccalaureat.test;
 import com.baccalaureat.ai.CategorizationEngine;
 import com.baccalaureat.ai.FixedListValidator;
 import com.baccalaureat.ai.WebConfigurableValidator;
-import com.baccalaureat.ai.SemanticAiValidator;
 import com.baccalaureat.ai.CategoryValidator;
+import com.baccalaureat.ai.N8nAIClient;
+import com.baccalaureat.ai.AICategoryValidator;
 import com.baccalaureat.model.Category;
 import com.baccalaureat.model.ValidationResult;
 import com.baccalaureat.model.ValidationStatus;
@@ -21,11 +22,11 @@ import java.util.ArrayList;
  * This class demonstrates:
  * - FixedListValidator for deterministic words
  * - WebConfigurableValidator for web-based validation via DictionaryAPI.dev
+ * - N8n AI validation via webhook for intelligent category validation
  * - Validation pipeline orchestration
  * - Multi-round game simulation
  * 
  * Future extensions:
- * - Add SemanticAiValidator when AI implementation is ready
  * - Add performance benchmarking
  * - Add batch validation testing
  */
@@ -67,12 +68,13 @@ public class BackendTestRunner {
         };
         
         // Initialize validation pipeline
-        // Order: FixedList → Web API → SemanticAI (when ready)
+        // Order: FixedList → Web API → N8n AI
         List<CategoryValidator> validators = new ArrayList<>();
         validators.add(new FixedListValidator());
-        validators.add(new WebConfigurableValidator(categoryService));  // Replaced ApiCategoryValidator
-        // TODO: Add SemanticAiValidator when AI implementation is ready
-        // validators.add(new SemanticAiValidator());
+        validators.add(new WebConfigurableValidator(categoryService));
+        // Add N8n AI validator for intelligent category validation
+        N8nAIClient n8nClient = new N8nAIClient();
+        validators.add(new AICategoryValidator(n8nClient, 0.7, true));
         
         this.engine = new CategorizationEngine(validators);
     }
