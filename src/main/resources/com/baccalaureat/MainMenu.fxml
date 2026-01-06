@@ -22,7 +22,7 @@
             </effect>
         </Label>
         <Label text="Baccalauréat+" styleClass="game-title"/>
-        <Label text="Le jeu de mots ultime" styleClass="subtitle"/>
+        <Label text="The ultimate word game" styleClass="subtitle"/>
     </VBox>
     
     <!-- Spacer -->
@@ -32,12 +32,12 @@
     <HBox spacing="30" alignment="CENTER">
         <VBox alignment="CENTER" styleClass="info-card" spacing="5">
             <Label text="🏆" style="-fx-font-size: 24px;"/>
-            <Label text="Meilleur Score" styleClass="info-label"/>
+            <Label text="Best Score" styleClass="info-label"/>
             <Label fx:id="highScoreLabel" text="0" styleClass="info-value"/>
         </VBox>
         <VBox alignment="CENTER" styleClass="info-card" spacing="5">
             <Label text="🎮" style="-fx-font-size: 24px;"/>
-            <Label text="Parties Jouées" styleClass="info-label"/>
+            <Label text="Games Played" styleClass="info-label"/>
             <Label fx:id="gamesPlayedLabel" text="0" styleClass="info-value"/>
         </VBox>
         <VBox alignment="CENTER" styleClass="info-card" spacing="5">
@@ -52,15 +52,16 @@
     
         <!-- Main Actions -->
         <VBox spacing="15" alignment="CENTER">
-        <Button fx:id="startSoloButton" text="👤  Mode Solo" 
+        <Button fx:id="startSoloButton" text="👤  Solo Mode" 
             onAction="#handleStartSolo" styleClass="menu-button" prefWidth="280"/>
-        <Button fx:id="startMultiplayerButton" text="👥  Mode Multijoueur" 
+        <Button fx:id="startMultiplayerButton" text="👥  Multiplayer Mode" 
             onAction="#handleStartMultiplayer" styleClass="multiplayer-button" prefWidth="280"/>
-        <Button fx:id="howToPlayButton" text="📖  Comment Jouer" 
+        <Button fx:id="howToPlayButton" text="📖  How to Play" 
             onAction="#handleHowToPlay" styleClass="secondary-button" prefWidth="280"/>
         <HBox spacing="15" alignment="CENTER">
-            <Button fx:id="themeToggleButton" text="🌙 Mode Sombre" onAction="#handleThemeToggle" styleClass="secondary-button" prefWidth="180"/>
-            <Button fx:id="categoryConfigButton" text="⚙️ Catégories" onAction="#handleCategoryConfig" styleClass="secondary-button" prefWidth="140"/>
+            <Button fx:id="themeToggleButton" text="🌙 Dark Mode" onAction="#handleThemeToggle" styleClass="secondary-button" prefWidth="130"/>
+            <Button fx:id="categoryConfigButton" text="⚙️ Categories" onAction="#handleCategoryConfig" styleClass="secondary-button" prefWidth="100"/>
+            <Button fx:id="settingsButton" text="⚙️ Settings" onAction="#handleSettings" styleClass="secondary-button" prefWidth="100"/>
         </HBox>
         </VBox>
     
@@ -68,6 +69,6 @@
     <Region VBox.vgrow="ALWAYS"/>
     
     <!-- Footer -->
-    <Label text="Version 2.0 • Créé avec ❤️ en JavaFX" 
+    <Label text="Version 2.0 • Created with ❤️ in JavaFX" 
            style="-fx-text-fill: #888; -fx-font-size: 11px;"/>
 </VBox>

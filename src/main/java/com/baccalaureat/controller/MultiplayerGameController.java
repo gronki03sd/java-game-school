@@ -122,6 +122,11 @@ public class MultiplayerGameController {
         generateNewLetter();
         setupUI();
         setupScoresBar();
+        // Don't start the player turn yet - wait for scene to be fully shown
+        // This will be started by calling startGameAfterSceneShown()
+    }
+    
+    public void startGameAfterSceneShown() {
         startPlayerTurn();
     }
 

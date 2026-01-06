@@ -59,7 +59,7 @@ public class CategorizationEngine {
         }
         
         ValidationResult bestResult = new ValidationResult(
-            ValidationStatus.UNCERTAIN, 0.0, "ENGINE", "No validators available"
+            ValidationStatus.INVALID, 0.0, "AI_FALLBACK", "No confident validation available - defaulting to INVALID"
         );
         
         // Try each validator in order until we get a confident result
@@ -86,6 +86,17 @@ public class CategorizationEngine {
                 // Log error and continue with next validator
                 System.err.println("Validator " + validator.getSourceName() + " failed: " + e.getMessage());
             }
+        }
+        
+        // AI FINAL RESOLUTION: Ensure no UNCERTAIN results reach UI
+        if (bestResult.getStatus() == ValidationStatus.UNCERTAIN) {
+            // Force AI to make a final decision
+            bestResult = new ValidationResult(
+                ValidationStatus.INVALID, 
+                0.5, 
+                "AI_RESOLVER", 
+                "Uncertain result resolved to INVALID by AI fallback"
+            );
         }
         
         return bestResult;

@@ -105,16 +105,16 @@ public class GameConfig {
      */
     public String getValidationMessage() {
         if (selectedCategories == null || selectedCategories.isEmpty()) {
-            return "Veuillez sélectionner au moins une catégorie";
+            return "Please select at least one category";
         }
         
         if (playerNicknames == null || playerNicknames.isEmpty()) {
-            return "Veuillez ajouter au moins un joueur";
+            return "Please add at least one player";
         }
         
         for (String nickname : playerNicknames) {
             if (nickname == null || nickname.trim().isEmpty()) {
-                return "Tous les noms de joueurs doivent être renseignés";
+                return "All player names must be filled";
             }
         }
         

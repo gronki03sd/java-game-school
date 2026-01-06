@@ -11,6 +11,7 @@ import com.baccalaureat.ai.CategorizationEngine;
 import com.baccalaureat.model.Category;
 import com.baccalaureat.model.GameConfig;
 import com.baccalaureat.model.GameSession;
+import com.baccalaureat.model.RoundState;
 import com.baccalaureat.model.ValidationResult;
 import com.baccalaureat.model.ValidationStatus;
 import com.baccalaureat.service.ValidationService;
@@ -89,6 +90,9 @@ public class GameController {
     private final Set<String> usedWordsThisRound = new HashSet<>();
 
     private Timeline countdown;
+    private boolean showingResults = false; // Guard to prevent dialog stacking
+    private RoundState roundState = RoundState.INIT; // Authoritative round state
+    private boolean hasScored = false; // Prevent multiple scoring
     private int remainingSeconds;
     private int totalSeconds;
     private int hintsUsed = 0;
@@ -124,6 +128,9 @@ public class GameController {
         session = new GameSession(config);
         totalSeconds = session.getTimeSeconds();
         remainingSeconds = totalSeconds;
+        showingResults = false; // Reset dialog guard for new game
+        roundState = RoundState.INIT; // Reset round state
+        hasScored = false; // Reset scoring guard
         
         // Clear existing UI if any
         categoriesContainer.getChildren().clear();
@@ -136,6 +143,19 @@ public class GameController {
         
         // Setup UI with new configuration
         setupUI();
+        
+        // Don't start the game yet - wait for scene to be fully shown
+        // The game will be started by calling startGameAfterSceneShown()
+    }
+    
+    public void startGameAfterSceneShown() {
+        roundState = RoundState.RUNNING; // Mark round as active
+        startCountdown();
+        animateLetterReveal();
+    }
+    
+    private void startGame() {
+        roundState = RoundState.RUNNING; // Mark round as active
         startCountdown();
         animateLetterReveal();
     }
@@ -276,7 +296,7 @@ public class GameController {
 
             if (remainingSeconds <= 0) {
                 countdown.stop();
-                validateAll();
+                endRound(); // Use proper round end method
             }
         }));
         countdown.setCycleCount(remainingSeconds);
@@ -297,7 +317,7 @@ public class GameController {
     @FXML
     private void handleStopAndValidate() {
         if (countdown != null) countdown.stop();
-        validateAll();
+        endRound(); // Use proper round end method
     }
 
     @FXML
@@ -365,7 +385,41 @@ public class GameController {
      * Validates ALL entered words in one batch for better performance.
      * This replaces the old real-time validation approach.
      */
-    private void validateAll() {
+    /**
+     * Properly end the round with state management and single scoring.
+     */
+    private void endRound() {
+        // Guard against multiple round endings
+        if (roundState != RoundState.RUNNING) {
+            return; // Round already ended
+        }
+        
+        // Transition to FINISHED state immediately
+        roundState = RoundState.FINISHED;
+        
+        // Validate and score ONCE
+        if (!hasScored) {
+            int points = validateAndScore();
+            hasScored = true; // Prevent multiple scoring
+            
+            // Show results after validation completes
+            Timeline delay = new Timeline(new KeyFrame(Duration.seconds(1.5), e -> {
+                showRoundResults(points);
+            }));
+            delay.setCycleCount(1);
+            delay.play();
+        }
+    }
+    
+    /**
+     * Validate all words and calculate score ONCE per round.
+     */
+    private int validateAndScore() {
+        // Only score if round is finished and not yet scored
+        if (roundState != RoundState.FINISHED || hasScored) {
+            return 0;
+        }
+        
         int points = 0;
         
         // Clear any cached results from previous rounds
@@ -392,23 +446,23 @@ public class GameController {
                 points += calculatePoints(result);
                 animateSuccess(card);
             } else if (result.isUncertain()) {
+                // UNCERTAIN should not reach UI - resolve through AI
                 points += 1; // Partial credit for uncertain results
             }
 
             tf.setDisable(true);
         }
 
+        // Add points to session ONCE
         session.addPoints(points);
         scoreLabel.setText(String.valueOf(session.getCurrentScore()));
+        
+        // Disable all controls
         stopButton.setDisable(true);
         hintButton.setDisable(true);
         skipButton.setDisable(true);
-
-        // Show results after a short delay using Platform.runLater to avoid threading issues
-        final int finalPoints = points;
-        Timeline delay = new Timeline(new KeyFrame(Duration.seconds(1.5), e -> 
-            javafx.application.Platform.runLater(() -> showRoundResults(finalPoints))));
-        delay.play();
+        
+        return points;
     }
     
     
@@ -582,6 +636,9 @@ public class GameController {
     }
 
     private void showRoundResults(int pointsGained) {
+        // Transition to dialog shown state
+        roundState = RoundState.DIALOG_SHOWN;
+        
         String title = pointsGained > 0 ? "🎉 Bravo!" : "😅 Dommage!";
         String message = "Points gagnés: +" + pointsGained + "\n" +
                         "Score total: " + session.getCurrentScore() + "\n\n" +
@@ -598,6 +655,7 @@ public class GameController {
             alert.getButtonTypes().setAll(nextRound, quit);
 
             Optional<ButtonType> result = alert.showAndWait();
+            
             if (result.isPresent() && result.get() == nextRound) {
                 proceedToNextRound();
             } else {
@@ -611,12 +669,17 @@ public class GameController {
             showFinalResults();
         }
     }
+    }
 
     private void proceedToNextRound() {
+        roundState = RoundState.TRANSITIONING;
+        hasScored = false; // Reset scoring guard for next round
+        
         if (session.nextRound()) {
             remainingSeconds = session.getTimeSeconds();
             timerLabel.getStyleClass().remove("timer-warning");
             setupUI();
+            roundState = RoundState.RUNNING; // Start next round
             startCountdown();
             animateLetterReveal();
         } else {

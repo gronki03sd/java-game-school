@@ -23,6 +23,7 @@ public class MainMenuController {
     @FXML private Button howToPlayButton;
     @FXML private Button themeToggleButton;
     @FXML private Button categoryConfigButton;
+    @FXML private Button settingsButton;
     @FXML private Label highScoreLabel;
     @FXML private Label gamesPlayedLabel;
     @FXML private Label categoriesCountLabel;
@@ -141,6 +142,23 @@ public class MainMenuController {
             
             // Refresh categories count after closing dialog
             updateCategoriesCount();
+            
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    @FXML
+    private void handleSettings(ActionEvent event) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/Settings.fxml"));
+            Parent root = loader.load();
+
+            Stage settingsStage = new Stage();
+            settingsStage.setTitle("Settings");
+            settingsStage.initModality(Modality.APPLICATION_MODAL);
+            settingsStage.setScene(new Scene(root, 400, 300));
+            settingsStage.show();
             
         } catch (IOException e) {
             e.printStackTrace();

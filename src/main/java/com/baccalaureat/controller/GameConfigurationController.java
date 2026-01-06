@@ -4,6 +4,7 @@ import com.baccalaureat.model.Category;
 import com.baccalaureat.model.GameConfig;
 import com.baccalaureat.model.GameSession;
 import com.baccalaureat.service.CategoryService;
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -123,13 +124,16 @@ public class GameConfigurationController {
     }
     
     private void setupValidation() {
-        // Listen to nickname field changes
+        // For Solo mode, auto-set default player name
+        // For other modes, listen to nickname field changes
         soloNicknameField.textProperty().addListener((obs, oldVal, newVal) -> {
-            List<String> nicknames = new ArrayList<>();
-            if (newVal != null && !newVal.trim().isEmpty()) {
-                nicknames.add(newVal.trim());
+            if (gameConfig.getMode() != GameConfig.GameMode.SOLO) {
+                List<String> nicknames = new ArrayList<>();
+                if (newVal != null && !newVal.trim().isEmpty()) {
+                    nicknames.add(newVal.trim());
+                }
+                gameConfig.setPlayerNicknames(nicknames);
             }
-            gameConfig.setPlayerNicknames(nicknames);
             validateConfiguration();
         });
     }
@@ -145,9 +149,11 @@ public class GameConfigurationController {
         
         switch (gameConfig.getMode()) {
             case SOLO -> {
-                playerSectionTitle.setText("👤 Configuration Joueur");
-                soloPlayerConfig.setVisible(true);
-                soloPlayerConfig.setManaged(true);
+                // Solo mode: use default player name, no UI needed
+                List<String> defaultPlayer = List.of("Player");
+                gameConfig.setPlayerNicknames(defaultPlayer);
+                playerSectionTitle.setText("👤 Solo Player");
+                // Keep solo config hidden for cleaner UI
             }
             case LOCAL -> {
                 playerSectionTitle.setText("👥 Configuration Joueurs");
@@ -323,11 +329,26 @@ public class GameConfigurationController {
         Object controller = loader.getController();
         if (controller instanceof GameController gc) {
             gc.setDarkMode(darkMode);
-            gc.configureGame(gameConfig);
+            try {
+                gc.configureGame(gameConfig);
+            } catch (Exception e) {
+                System.err.println("Error configuring GameController: " + e.getMessage());
+                e.printStackTrace();
+                throw new IOException("Failed to configure game controller", e);
+            }
+            
+            // Show the scene first, then start the game
+            stage.setScene(scene);
+            stage.show();
+            
+            // Start the game after the scene is shown
+            Platform.runLater(() -> {
+                gc.startGameAfterSceneShown();
+            });
+        } else {
+            stage.setScene(scene);
+            stage.show();
         }
-        
-        stage.setScene(scene);
-        stage.show();
     }
     
     private void startLocalGame(Stage stage) throws IOException {
@@ -344,11 +365,26 @@ public class GameConfigurationController {
         // Configure MultiplayerGameController with our settings
         Object controller = loader.getController();
         if (controller instanceof MultiplayerGameController mgc) {
-            mgc.configureGame(gameConfig);
+            try {
+                mgc.configureGame(gameConfig);
+            } catch (Exception e) {
+                System.err.println("Error configuring MultiplayerGameController: " + e.getMessage());
+                e.printStackTrace();
+                throw new IOException("Failed to configure multiplayer game controller", e);
+            }
+            
+            // Show the scene first, then start the game
+            stage.setScene(scene);
+            stage.show();
+            
+            // Start the game after the scene is shown
+            Platform.runLater(() -> {
+                mgc.startGameAfterSceneShown();
+            });
+        } else {
+            stage.setScene(scene);
+            stage.show();
         }
-        
-        stage.setScene(scene);
-        stage.show();
     }
     
     private void showError(String title, String message) {

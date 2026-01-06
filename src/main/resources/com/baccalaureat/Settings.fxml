@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns="http://javafx.com/javafx/21.0.2" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.baccalaureat.controller.SettingsController"
+      spacing="20" alignment="CENTER" styleClass="main-menu" stylesheets="@styles.css">
+    
+    <padding>
+        <Insets top="30" right="40" bottom="30" left="40"/>
+    </padding>
+    
+    <!-- Header -->
+    <Label text="Settings" styleClass="game-title"/>
+    
+    <!-- Language Selection -->
+    <VBox spacing="10" alignment="CENTER" styleClass="config-section">
+        <Label text="Language" styleClass="section-title"/>
+        <ComboBox fx:id="languageComboBox" prefWidth="200" styleClass="config-combo">
+            <items>
+                <String fx:value="English"/>
+                <String fx:value="Français"/>
+            </items>
+        </ComboBox>
+    </VBox>
+    
+    <!-- Actions -->
+    <HBox spacing="15" alignment="CENTER">
+        <Button fx:id="closeButton" text="Close" styleClass="secondary-button" 
+                onAction="#handleClose" prefWidth="100"/>
+    </HBox>
+    
+</VBox>
