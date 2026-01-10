@@ -93,9 +93,9 @@ public class CategoryConfigController implements Initializable {
         
         // Actions column with edit/delete buttons
         actionsColumn.setCellFactory(col -> new TableCell<CategoryRow, Void>() {
-            private final Button editButton = new Button("Modifier");
-            private final Button deleteButton = new Button("Supprimer");
-            private final Label predefinedBadge = new Label("Prédéfinie");
+            private final Button editButton = new Button("Edit");
+            private final Button deleteButton = new Button("Delete");
+            private final Label predefinedBadge = new Label("Predefined");
             private final HBox buttonsBox = new HBox(5);
             
             {
@@ -165,7 +165,7 @@ public class CategoryConfigController implements Initializable {
         
         // Default icon if empty
         iconField.setPromptText("📝");
-        hintField.setPromptText("Une catégorie personnalisée");
+        hintField.setPromptText("A custom category");
     }
     
     /**
@@ -194,7 +194,7 @@ public class CategoryConfigController implements Initializable {
         
         // Validate required field
         if (displayName.isEmpty()) {
-            showStatus("Erreur : Le nom affiché est obligatoire", true);
+            showStatus("Error: Display name is required", true);
             return;
         }
         
@@ -203,12 +203,12 @@ public class CategoryConfigController implements Initializable {
         
         // Use defaults if optional fields are empty
         if (icon.isEmpty()) icon = "📝";
-        if (hint.isEmpty()) hint = "Une catégorie personnalisée";
+        if (hint.isEmpty()) hint = "A custom category";
         
         CategoryCreationResult result = categoryService.createCategory(internalName, displayName, icon, hint);
         
         if (result.isSuccess()) {
-            showStatus("Catégorie créée avec succès !", false);
+            showStatus("Category created successfully!", false);
             clearForm();
             loadCategories();
         } else {
@@ -231,7 +231,7 @@ public class CategoryConfigController implements Initializable {
     private void editCategory(Category category) {
         // Prevent editing predefined categories
         if (category.isPredefined()) {
-            showStatus("Les catégories prédéfinies ne peuvent pas être modifiées", true);
+            showStatus("Predefined categories cannot be modified", true);
             return;
         }
         
@@ -246,7 +246,7 @@ public class CategoryConfigController implements Initializable {
             );
             
             if (updateResult.isSuccess()) {
-                showStatus("Catégorie modifiée avec succès !", false);
+                showStatus("Category modified successfully!", false);
                 loadCategories();
             } else {
                 showStatus("Erreur : " + updateResult.getErrorMessage(), true);
@@ -256,24 +256,24 @@ public class CategoryConfigController implements Initializable {
     
     private Dialog<CategoryUpdateData> createEditDialog(Category category) {
         Dialog<CategoryUpdateData> dialog = new Dialog<>();
-        dialog.setTitle("Modifier la catégorie");
-        dialog.setHeaderText("Modifier " + category.getDisplayName());
+        dialog.setTitle("Edit category");
+        dialog.setHeaderText("Edit " + category.getDisplayName());
         
         // Form controls - NO internal name field for users
         TextField displayNameField = new TextField(category.getDisplayName());
         TextField iconField = new TextField(category.getIcon());
         TextArea hintField = new TextArea(category.getHint());
         
-        displayNameField.setPromptText("Nom affiché");
-        iconField.setPromptText("Icône");
+        displayNameField.setPromptText("Display name");
+        iconField.setPromptText("Icon");
         hintField.setPromptText("Description");
         hintField.setPrefRowCount(3);
         
         // Layout - only user-friendly fields
         VBox content = new VBox(10);
         content.getChildren().addAll(
-            new Label("Nom affiché *:"), displayNameField,
-            new Label("Icône :"), iconField,
+            new Label("Display name *:"), displayNameField,
+            new Label("Icon :"), iconField,
             new Label("Description :"), hintField
         );
         content.setPadding(new Insets(20));
@@ -310,14 +310,14 @@ public class CategoryConfigController implements Initializable {
     private void deleteCategory(Category category) {
         // Prevent deletion of predefined categories
         if (category.isPredefined()) {
-            showStatus("Les catégories prédéfinies ne peuvent pas être supprimées", true);
+            showStatus("Predefined categories cannot be deleted", true);
             return;
         }
         
         Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmation.setTitle("Supprimer la catégorie");
-        confirmation.setHeaderText("Êtes-vous sûr ?");
-        confirmation.setContentText("Cette action va supprimer définitivement la catégorie \"" + category.getDisplayName() + 
+        confirmation.setTitle("Delete category");
+        confirmation.setHeaderText("Are you sure?");
+        confirmation.setContentText("This action will permanently delete the category \"" + category.getDisplayName() + 
                                    "\".");
         
         Optional<ButtonType> result = confirmation.showAndWait();

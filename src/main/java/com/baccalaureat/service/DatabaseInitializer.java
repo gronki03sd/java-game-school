@@ -18,16 +18,16 @@ public class DatabaseInitializer {
      * These categories cannot be deleted by users.
      */
     private static final String[][] PREDEFINED_CATEGORIES = {
-        {"PRENOM", "Prénom", "👤", "Un prénom de personne"},
-        {"VILLE", "Ville", "🏙️", "Une ville du monde"},
-        {"PAYS", "Pays", "🌍", "Un pays du monde"},
-        {"ANIMAL", "Animal", "🐾", "Un animal"},
-        {"FRUIT", "Fruit", "🍎", "Un fruit"},
-        {"LEGUME", "Légume", "🥕", "Un légume"},
-        {"METIER", "Métier", "👔", "Une profession ou métier"},
-        {"COULEUR", "Couleur", "🎨", "Une couleur"},
-        {"OBJET", "Objet", "📦", "Un objet du quotidien"},
-        {"MARQUE", "Marque", "🏷️", "Une marque commerciale"}
+        {"PRENOM", "First Name", "👤", "A person's first name"},
+        {"VILLE", "City", "🏙️", "A city of the world"},
+        {"PAYS", "Country", "🌍", "A country of the world"},
+        {"ANIMAL", "Animal", "🐾", "An animal"},
+        {"FRUIT", "Fruit", "🍎", "A fruit"},
+        {"LEGUME", "Vegetable", "🥕", "A vegetable"},
+        {"METIER", "Job", "👔", "A profession or job"},
+        {"COULEUR", "Color", "🎨", "A color"},
+        {"OBJET", "Object", "📦", "An everyday object"},
+        {"MARQUE", "Brand", "🏷️", "A commercial brand"}
     };
     
     public DatabaseInitializer() {

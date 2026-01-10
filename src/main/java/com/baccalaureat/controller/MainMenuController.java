@@ -58,7 +58,7 @@ public class MainMenuController {
 
     private void updateThemeButton() {
         if (themeToggleButton != null) {
-            themeToggleButton.setText(darkMode ? "☀️ Mode Clair" : "🌙 Mode Sombre");
+            themeToggleButton.setText(darkMode ? "☀️ Light Mode" : "🌙 Dark Mode");
         }
     }
 
