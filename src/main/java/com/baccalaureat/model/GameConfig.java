@@ -90,6 +90,12 @@ public class GameConfig {
             return false;
         }
         
+        // Check minimum player count based on game mode
+        int minPlayers = (mode == GameMode.SOLO) ? 1 : 2;
+        if (playerNicknames.size() < minPlayers) {
+            return false;
+        }
+        
         // Check that all nicknames are non-empty
         for (String nickname : playerNicknames) {
             if (nickname == null || nickname.trim().isEmpty()) {
@@ -112,6 +118,14 @@ public class GameConfig {
             return "Please add at least one player";
         }
         
+        // Check minimum player count based on game mode
+        int minPlayers = (mode == GameMode.SOLO) ? 1 : 2;
+        if (playerNicknames.size() < minPlayers) {
+            return mode == GameMode.SOLO ? 
+                "Solo mode requires 1 player" : 
+                "Multiplayer mode requires at least 2 players";
+        }
+        
         for (String nickname : playerNicknames) {
             if (nickname == null || nickname.trim().isEmpty()) {
                 return "All player names must be filled";
@@ -119,11 +133,11 @@ public class GameConfig {
         }
         
         if (numberOfRounds <= 0) {
-            return "Le nombre de manches doit être supérieur à 0";
+            return "Number of rounds must be greater than 0";
         }
         
         if (roundDurationSeconds <= 0) {
-            return "La durée des manches doit être supérieure à 0";
+            return "Round duration must be greater than 0";
         }
         
         return "";

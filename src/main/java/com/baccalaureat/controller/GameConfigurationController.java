@@ -89,6 +89,9 @@ public class GameConfigurationController {
     
     private void setupDurationComboBox() {
         durationComboBox.setValue("2 minutes (120s)");
+        // Set initial timer value to match the default selection
+        gameConfig.setRoundDurationSeconds(120);
+        
         durationComboBox.valueProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null) {
                 // Extract the number from strings like "1 minute (60s)" or "1m 30s (90s)" etc
