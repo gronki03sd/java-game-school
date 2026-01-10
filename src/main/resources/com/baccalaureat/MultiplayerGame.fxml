@@ -16,6 +16,10 @@
                     <Insets top="15" right="25" bottom="15" left="25"/>
                 </padding>
                 
+                <!-- Back Button -->
+                <Button fx:id="backButton" text="← Retour" styleClass="back-button" 
+                        onAction="#handleBackToMenu"/>
+                
                 <!-- Current Player -->
                 <VBox alignment="CENTER" spacing="2">
                     <Label text="JOUEUR" styleClass="info-label"/>

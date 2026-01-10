@@ -12,6 +12,7 @@ import com.baccalaureat.model.Category;
 import com.baccalaureat.model.GameConfig;
 import com.baccalaureat.model.GameSession;
 import com.baccalaureat.model.Player;
+import com.baccalaureat.model.RoundState;
 import com.baccalaureat.model.ValidationResult;
 import com.baccalaureat.model.ValidationStatus;
 import com.baccalaureat.service.ValidationService;
@@ -46,6 +47,7 @@ public class MultiplayerGameController {
     @FXML private VBox categoriesContainer;
     @FXML private HBox scoresBar;
     @FXML private Button validateButton;
+    @FXML private Button backButton;
     @FXML private ProgressBar timerProgress;
 
     private final ValidationService validationService = new ValidationService();
@@ -57,6 +59,7 @@ public class MultiplayerGameController {
     private final Map<Player, VBox> playerScoreCards = new HashMap<>();
 
     private Timeline countdown;
+    private RoundState roundState = RoundState.INIT; // Add round state management
     private int remainingSeconds;
     private int totalSeconds;
     private int currentRound = 1;
@@ -67,13 +70,10 @@ public class MultiplayerGameController {
 
     @FXML
     private void initialize() {
-        players = MultiplayerLobbyController.getGamePlayers();
-        if (players == null || players.isEmpty()) {
-            navigateToMenu();
-            return;
-        }
-
-        // Apply theme
+        // Initialize UI only - game configuration comes from configureGame() method
+        // This fixes the conflict between lobby-based and configuration-based initialization
+        
+        // Apply theme (scene may not be ready yet)
         Scene scene = letterLabel.getScene();
         if (scene != null) {
             scene.getStylesheets().removeIf(s -> s.contains("theme-light.css") || s.contains("theme-dark.css"));
@@ -83,21 +83,8 @@ public class MultiplayerGameController {
                 scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-light.css").toExternalForm());
             }
         }
-
-        // Reset all players for new game
-        for (Player p : players) {
-            p.resetForNewGame();
-        }
-
-        session = new GameSession();
-        totalSeconds = session.getTimeSeconds();
-        totalRounds = session.getTotalRounds();
-        categories = session.getCategories();
-
-        generateNewLetter();
-        setupUI();
-        setupScoresBar();
-        startPlayerTurn();
+        
+        // Game setup will happen via configureGame() call from GameConfigurationController
     }
 
     public void setDarkMode(boolean dark) {
@@ -294,6 +281,8 @@ public class MultiplayerGameController {
         Player current = players.get(currentPlayerIndex);
         current.resetForNewRound();
         
+        roundState = RoundState.RUNNING; // Mark round as active
+        
         currentPlayerLabel.setText(current.getName());
         remainingSeconds = totalSeconds;
         timerLabel.setText(formatTime(remainingSeconds));
@@ -340,6 +329,7 @@ public class MultiplayerGameController {
 
             if (remainingSeconds <= 0) {
                 countdown.stop();
+                roundState = RoundState.FINISHED; // Mark round as finished
                 handleValidate();
             }
         }));
@@ -349,12 +339,18 @@ public class MultiplayerGameController {
 
     @FXML
     private void handleValidate() {
+        // Guard against validation after round end
+        if (roundState != RoundState.RUNNING) {
+            return; // Round already ended or not running
+        }
+        
         if (countdown != null) countdown.stop();
+        roundState = RoundState.FINISHED; // Mark round as finished
 
         Player current = players.get(currentPlayerIndex);
         int points = 0;
 
-        // Collect and validate answers
+        // Collect and validate answers using proper pipeline order
         for (Category c : categories) {
             TextField tf = inputFields.get(c);
             String word = tf.getText() != null ? tf.getText().trim() : "";
@@ -362,24 +358,14 @@ public class MultiplayerGameController {
 
             current.setAnswer(c, word);
 
-            boolean startsCorrect = !word.isEmpty() && word.substring(0, 1).equalsIgnoreCase(currentLetter);
-            
-            if (!startsCorrect) {
-                status.setText("❌");
-                status.getStyleClass().removeAll("status-valid", "status-invalid", "status-uncertain", "status-pending");
-                status.getStyleClass().add("status-invalid");
-                tf.setDisable(true);
-                continue;
-            }
-
-            // Delegate validation to service layer
+            // Use ValidationService for proper pipeline validation (FixedList → API → AI)
             ValidationResult result = validationService.validateWord(c.name(), word);
             
             // Apply visual feedback based on validation result
             applyValidationStatus(result, status);
             
             if (result.isValid()) {
-                points += 2;
+                points += 1;  // Simple scoring: +1 per correct answer
             }
 
             tf.setDisable(true);
@@ -548,6 +534,31 @@ public class MultiplayerGameController {
             Stage stage = (Stage) letterLabel.getScene().getWindow();
             Parent root = FXMLLoader.load(getClass().getResource("/com/baccalaureat/MainMenu.fxml"));
             stage.setScene(new Scene(root, 900, 700));
+            stage.show();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @FXML
+    private void handleBackToMenu() {
+        try {
+            if (countdown != null) countdown.stop();
+            roundState = RoundState.INIT; // Reset round state
+            
+            Stage stage = (Stage) backButton.getScene().getWindow();
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/MainMenu.fxml"));
+            Parent root = loader.load();
+            Scene scene = new Scene(root, 1000, 750);
+            
+            // Apply theme
+            if (darkMode) {
+                scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-dark.css").toExternalForm());
+            } else {
+                scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-light.css").toExternalForm());
+            }
+            
+            stage.setScene(scene);
             stage.show();
         } catch (IOException e) {
             e.printStackTrace();

@@ -19,6 +19,7 @@ import com.baccalaureat.service.CategoryService;
 import javafx.animation.KeyFrame;
 import javafx.animation.ScaleTransition;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
@@ -100,10 +101,9 @@ public class GameController {
 
     @FXML
     private void initialize() {
-        session = new GameSession();
-        totalSeconds = session.getTimeSeconds();
-        remainingSeconds = totalSeconds;
-
+        // Initialize UI only - game configuration comes from configureGame() method
+        // This prevents the default GameSession from overriding the configured timer duration
+        
         // Apply theme
         Scene scene = letterLabel.getScene();
         if (scene != null) {
@@ -115,9 +115,7 @@ public class GameController {
             }
         }
 
-        setupUI();
-        startCountdown();
-        animateLetterReveal();
+        // Game setup will happen via configureGame() call from GameConfigurationController
     }
 
     public void setDarkMode(boolean dark) {
@@ -150,6 +148,7 @@ public class GameController {
     
     public void startGameAfterSceneShown() {
         roundState = RoundState.RUNNING; // Mark round as active
+        showingResults = false; // Ensure dialog guard is reset
         startCountdown();
         animateLetterReveal();
     }
@@ -281,6 +280,7 @@ public class GameController {
     }
 
     private void startCountdown() {
+        if (countdown != null) countdown.stop(); // Prevent timer stacking
         countdown = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
             remainingSeconds--;
             timerLabel.setText(formatTime(remainingSeconds));
@@ -334,8 +334,8 @@ public class GameController {
             session.endGame();
             navigateToMenu();
         } else {
-            // Resume countdown
-            if (remainingSeconds > 0) {
+            // Resume countdown only if round is still running and game is not finished
+            if (remainingSeconds > 0 && roundState == RoundState.RUNNING) {
                 startCountdown();
             }
         }
@@ -374,7 +374,7 @@ public class GameController {
         if (result.isPresent() && result.get() == ButtonType.OK) {
             proceedToNextRound();
         } else {
-            if (remainingSeconds > 0) {
+            if (remainingSeconds > 0 && roundState == RoundState.RUNNING) {
                 startCountdown();
             }
         }
@@ -400,14 +400,10 @@ public class GameController {
         // Validate and score ONCE
         if (!hasScored) {
             int points = validateAndScore();
-            hasScored = true; // Prevent multiple scoring
+            // hasScored is now set inside validateAndScore()
             
-            // Show results after validation completes
-            Timeline delay = new Timeline(new KeyFrame(Duration.seconds(1.5), e -> {
-                showRoundResults(points);
-            }));
-            delay.setCycleCount(1);
-            delay.play();
+            // Show results after JavaFX finishes current processing
+            Platform.runLater(() -> showRoundResults(points));
         }
     }
     
@@ -419,6 +415,9 @@ public class GameController {
         if (roundState != RoundState.FINISHED || hasScored) {
             return 0;
         }
+        
+        // Immediately mark as scored to prevent race conditions
+        hasScored = true;
         
         int points = 0;
         
@@ -589,39 +588,11 @@ public class GameController {
     }
     
     /**
-     * Calculates points based on validation result confidence and source.
-     * This method contains the scoring logic but not validation logic.
+     * Calculates points based on validation result.
+     * Simple scoring: +1 for valid words, 0 for invalid.
      */
     private int calculatePoints(ValidationResult result) {
-        if (!result.isValid()) {
-            return 0;
-        }
-        
-        // Base points for valid words
-        int basePoints = 2;
-        
-        // Bonus for high-confidence results
-        if (result.getConfidence() >= 0.9) {
-            basePoints += 1;
-        }
-        
-        // Different scoring based on validation source
-        switch (result.getSource()) {
-            case "FIXED_LIST":
-                // Standard points for deterministic validation
-                return basePoints;
-            case "DATABASE_CACHE":
-                // Cached results get standard points
-                return basePoints;
-            case "API":
-                // Future: API results might get bonus points
-                return basePoints + 1;
-            case "AI":
-                // Future: AI results might get different scoring
-                return basePoints;
-            default:
-                return basePoints;
-        }
+        return result.isValid() ? 1 : 0;
     }
 
     private void animateSuccess(HBox card) {
@@ -636,10 +607,18 @@ public class GameController {
     }
 
     private void showRoundResults(int pointsGained) {
+        // Guard against multiple dialog shows
+        if (showingResults) {
+            return; // Dialog already showing
+        }
+        showingResults = true;
+        
         // Transition to dialog shown state
         roundState = RoundState.DIALOG_SHOWN;
         
         String title = pointsGained > 0 ? "🎉 Bravo!" : "😅 Dommage!";
+        
+        // Simple results message
         String message = "Points gagnés: +" + pointsGained + "\n" +
                         "Score total: " + session.getCurrentScore() + "\n\n" +
                         "Manche " + session.getCurrentRound() + "/" + session.getTotalRounds();
@@ -648,6 +627,9 @@ public class GameController {
         alert.setTitle("Résultats de la manche");
         alert.setHeaderText(title);
         alert.setContentText(message);
+        
+        // Make dialog resizable
+        alert.setResizable(true);
 
         if (session.getCurrentRound() < session.getTotalRounds()) {
             ButtonType nextRound = new ButtonType("Manche suivante →");
@@ -657,23 +639,26 @@ public class GameController {
             Optional<ButtonType> result = alert.showAndWait();
             
             if (result.isPresent() && result.get() == nextRound) {
+                showingResults = false; // Reset dialog guard
                 proceedToNextRound();
             } else {
                 session.endGame();
+                showingResults = false; // Reset dialog guard
                 showFinalResults();
             }
         } else {
             session.endGame();
             alert.getButtonTypes().setAll(new ButtonType("Voir les résultats"));
             alert.showAndWait();
+            showingResults = false; // Reset dialog guard
             showFinalResults();
         }
-    }
     }
 
     private void proceedToNextRound() {
         roundState = RoundState.TRANSITIONING;
         hasScored = false; // Reset scoring guard for next round
+        showingResults = false; // Reset dialog guard for next round
         
         if (session.nextRound()) {
             remainingSeconds = session.getTimeSeconds();
