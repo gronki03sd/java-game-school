@@ -17,9 +17,14 @@
             <HBox alignment="CENTER_LEFT">
                 <Button text="← Retour" styleClass="back-button" onAction="#handleBackToMenu"/>
                 <Pane HBox.hgrow="ALWAYS"/>
+                <Label fx:id="connectionStatusLabel" text="🔄 Connexion..." style="-fx-text-fill: #ffd93d;"/>
             </HBox>
-            <Label text="👥 Mode Multijoueur" styleClass="lobby-title"/>
-            <Label text="Ajoutez des joueurs et commencez la partie!" styleClass="lobby-subtitle"/>
+            <Label text="🌐 Multijoueur en ligne" styleClass="lobby-title"/>
+            <Label text="Créez ou rejoignez une partie!" styleClass="lobby-subtitle"/>
+            <HBox fx:id="sessionIdDisplay" alignment="CENTER" spacing="10" visible="false">
+                <Label fx:id="sessionIdLabel" text="Code de session: " 
+                       style="-fx-text-fill: #4ecca3; -fx-font-size: 16px; -fx-font-weight: bold;"/>
+            </HBox>
         </VBox>
     </top>
     
@@ -30,46 +35,45 @@
                 <Insets top="20" right="50" bottom="20" left="50"/>
             </padding>
             
-            <!-- Add Player Section -->
-            <HBox spacing="15" alignment="CENTER">
-                <TextField fx:id="playerNameInput" promptText="Nom du joueur..." 
-                           styleClass="player-input"/>
-                <Button text="+ Ajouter" styleClass="add-player-button" 
-                        onAction="#handleAddPlayer"/>
-            </HBox>
+            <!-- Create or Join Game Section -->
+            <VBox spacing="10" alignment="CENTER">
+                <HBox spacing="10" alignment="CENTER">
+                    <TextField fx:id="playerNameInput" promptText="Votre nom..." 
+                               styleClass="player-input" prefWidth="200"/>
+                </HBox>
+                
+                <HBox spacing="10" alignment="CENTER">
+                    <Button fx:id="createGameButton" text="🎮 Créer une partie" 
+                            styleClass="add-player-button" onAction="#handleCreateGame"/>
+                    <Button fx:id="joinGameButton" text="🔗 Rejoindre" 
+                            styleClass="add-player-button" onAction="#handleJoinGame"/>
+                </HBox>
+                
+                <TextField fx:id="sessionIdInput" promptText="Code de session (pour rejoindre)..." 
+                           styleClass="player-input" prefWidth="200" visible="true"/>
+            </VBox>
             
-            <!-- Players Grid -->
-            <Label text="Joueurs" styleClass="section-title" style="-fx-font-size: 18px;"/>
-            <FlowPane fx:id="playersPane" hgap="20" vgap="20" alignment="CENTER" 
-                      prefWrapLength="600"/>
+            <!-- Players List -->
+            <Label text="Joueurs connectés" styleClass="section-title" style="-fx-font-size: 18px;"/>
+            <ListView fx:id="playersListView" prefHeight="150" prefWidth="400" 
+                      styleClass="players-list"/>
             
-            <!-- Min players notice -->
-            <Label fx:id="noticeLabel" text="Minimum 2 joueurs requis" 
-                   style="-fx-text-fill: #e74c3c; -fx-font-size: 12px;"/>
+            <!-- Status notice -->
+            <Label fx:id="noticeLabel" text="Créez une partie ou rejoignez avec un code" 
+                   style="-fx-text-fill: #cccccc; -fx-font-size: 12px;"/>
         </VBox>
     </center>
     
-    <!-- Bottom Actions -->
+            <!-- Bottom Actions -->
     <bottom>
         <VBox spacing="15" alignment="CENTER">
             <padding>
                 <Insets top="20" right="30" bottom="30" left="30"/>
             </padding>
             
-            <!-- Difficulty Selection -->
-            <HBox spacing="10" alignment="CENTER">
-                <Label text="Difficulté:" styleClass="section-title"/>
-                <ToggleButton fx:id="easyBtn" text="🌱 Facile" styleClass="difficulty-button" 
-                             onAction="#handleDifficultyChange" userData="EASY"/>
-                <ToggleButton fx:id="mediumBtn" text="⚡ Normal" styleClass="difficulty-button" 
-                             onAction="#handleDifficultyChange" userData="MEDIUM"/>
-                <ToggleButton fx:id="hardBtn" text="🔥 Difficile" styleClass="difficulty-button" 
-                             onAction="#handleDifficultyChange" userData="HARD"/>
-            </HBox>
-            
-            <Button fx:id="startGameButton" text="🎮 Commencer la Partie" 
+            <Button fx:id="startGameButton" text="🎮 Démarrer la partie" 
                     styleClass="menu-button" prefWidth="300" onAction="#handleStartGame" 
-                    disable="true"/>
+                    disable="true" visible="true"/>
         </VBox>
     </bottom>
 </BorderPane>

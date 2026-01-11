@@ -20,6 +20,7 @@ import javafx.stage.Stage;
 public class MainMenuController {
     @FXML private Button startSoloButton;
     @FXML private Button startMultiplayerButton;
+    @FXML private Button remoteMultiplayerButton;
     @FXML private Button howToPlayButton;
     @FXML private Button themeToggleButton;
     @FXML private Button categoryConfigButton;
@@ -70,6 +71,30 @@ public class MainMenuController {
     @FXML
     private void handleStartMultiplayer(ActionEvent event) throws IOException {
         navigateToGameConfiguration(GameConfig.GameMode.LOCAL);
+    }
+    
+    @FXML
+    private void handleRemoteMultiplayer(ActionEvent event) throws IOException {
+        Stage stage = (Stage) remoteMultiplayerButton.getScene().getWindow();
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/MultiplayerLobby.fxml"));
+        Parent root = loader.load();
+        Scene scene = new Scene(root, 1000, 750);
+        
+        // Apply current theme
+        if (darkMode) {
+            scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-dark.css").toExternalForm());
+        } else {
+            scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-light.css").toExternalForm());
+        }
+        
+        // Pass dark mode setting to the lobby controller
+        Object controller = loader.getController();
+        if (controller instanceof MultiplayerLobbyController mlc) {
+            mlc.setDarkMode(darkMode);
+        }
+        
+        stage.setScene(scene);
+        stage.show();
     }
 
     @FXML

@@ -17,7 +17,7 @@ import java.time.Duration;
  */
 public class N8nAIClient implements AIClient {
     
-    private static final String N8N_WEBHOOK_URL = "https://kirrimimi.app.n8n.cloud/webhook/chat";
+    private static final String N8N_WEBHOOK_URL = "https://gronki.app.n8n.cloud/webhook/chat";
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(8);
     
     private final HttpClient httpClient;

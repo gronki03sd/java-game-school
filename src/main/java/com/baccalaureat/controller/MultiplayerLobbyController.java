@@ -1,270 +1,375 @@
 package com.baccalaureat.controller;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.util.UUID;
 
-import com.baccalaureat.model.GameConfig;
-import com.baccalaureat.model.Player;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import javafx.event.ActionEvent;
+import javafx.application.Platform;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 /**
- * Controller for Multiplayer Lobby.
- * NOTE: This controller is now deprecated as multiplayer setup
- * is handled by the new GameConfigurationController.
- * This is kept for backward compatibility and will redirect users
- * to the new configuration system.
+ * Controller for Remote Multiplayer Lobby - STEP 3 REST API Integration.
+ * Connects to REST API server for multiplayer session management.
  */
 public class MultiplayerLobbyController {
+    private static final String SERVER_URL = "http://localhost:8080/api/sessions";
+    
     private boolean darkMode = false;
+    private String sessionId = null;
+    private boolean isHost = false;
+    private String playerName = "";
+    
+    // HTTP client for REST API calls
+    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObservableList<String> connectedPlayers = FXCollections.observableArrayList();
+    
     @FXML private TextField playerNameInput;
-    @FXML private FlowPane playersPane;
+    @FXML private TextField sessionIdInput;
+    @FXML private ListView<String> playersListView;
     @FXML private Button startGameButton;
+    @FXML private Button createGameButton;
+    @FXML private Button joinGameButton;
     @FXML private Label noticeLabel;
-
-    private final List<Player> players = new ArrayList<>();
-    private static List<Player> gamePlayers;
-
+    @FXML private Label sessionIdLabel;
+    @FXML private Label connectionStatusLabel;
+    
     @FXML
     private void initialize() {
-        // Show deprecation notice
-        if (noticeLabel != null) {
-            noticeLabel.setText("Cette interface sera bientôt remplacée par la nouvelle configuration de jeu.");
-        }
+        // Initialize ListView with connected players
+        playersListView.setItems(connectedPlayers);
         
-        // Enter key to add player
-        if (playerNameInput != null) {
-            playerNameInput.setOnAction(e -> handleAddPlayer());
-        }
-        
-        updateUI();
+        // Set initial UI state
+        connectionStatusLabel.setText("♾️ Prêt pour REST API");
+        startGameButton.setDisable(true);
+        noticeLabel.setText("Entrez votre nom et créez ou rejoignez une partie");
     }
-
+    
+    public void setDarkMode(boolean darkMode) {
+        this.darkMode = darkMode;
+    }
+    
     @FXML
-    private void handleAddPlayer() {
-        String name = playerNameInput.getText().trim();
-        if (name.isEmpty()) {
-            shakeInput();
+    private void handleCreateGame() {
+        String playerNameText = playerNameInput.getText().trim();
+        
+        if (playerNameText.isEmpty()) {
+            showError("Veuillez entrer votre nom");
             return;
         }
         
-        if (players.size() >= 8) {
-            if (noticeLabel != null) {
-                noticeLabel.setText("Maximum 8 joueurs!");
-                noticeLabel.setStyle("-fx-text-fill: #ff6b6b; -fx-font-size: 12px;");
-            }
+        this.playerName = playerNameText;
+        this.isHost = true;
+        
+        System.out.println("[LOBBY] Host creating session via REST API...");
+        connectionStatusLabel.setText("🔄 Création de la session...");
+        
+        // Call REST API to create session
+        createSessionViaAPI();
+    }
+    
+    @FXML
+    private void handleJoinGame() {
+        String playerNameText = playerNameInput.getText().trim();
+        String sessionCode = sessionIdInput.getText().trim();
+        
+        if (playerNameText.isEmpty()) {
+            showError("Veuillez entrer votre nom");
             return;
         }
-
-        // Check for duplicate names
-        if (players.stream().anyMatch(p -> p.getName().equalsIgnoreCase(name))) {
-            if (noticeLabel != null) {
-                noticeLabel.setText("Ce nom existe déjà!");
-                noticeLabel.setStyle("-fx-text-fill: #ff6b6b; -fx-font-size: 12px;");
-            }
-            shakeInput();
+        
+        if (sessionCode.isEmpty()) {
+            showError("Veuillez entrer un code de session");
             return;
         }
-
-        Player player = new Player(name);
-        players.add(player);
-        playerNameInput.clear();
-        updateUI();
+        
+        this.playerName = playerNameText;
+        this.sessionId = sessionCode;
+        this.isHost = false;
+        
+        System.out.println("[LOBBY] Player attempting to join session: " + sessionCode + " as " + playerNameText);
+        connectionStatusLabel.setText("🔄 Rejoindre la session...");
+        
+        // Call REST API to join session
+        joinSessionViaAPI();
     }
-
-    private void shakeInput() {
-        if (playerNameInput != null) {
-            playerNameInput.setStyle("-fx-border-color: #ff6b6b; -fx-border-width: 2;");
-            new Thread(() -> {
-                try {
-                    Thread.sleep(500);
-                    javafx.application.Platform.runLater(() -> 
-                        playerNameInput.setStyle(""));
-                } catch (InterruptedException ignored) {}
-            }).start();
+    
+    // REST API Integration
+    
+    private void createSessionViaAPI() {
+        try {
+            // Create JSON request body
+            ObjectNode requestBody = objectMapper.createObjectNode();
+            requestBody.put("hostUsername", playerName);
+            requestBody.put("roundDuration", 120); // 2 minutes default
+            
+            // Add default categories
+            var categoriesArray = requestBody.putArray("categories");
+            categoriesArray.add("Animal");
+            categoriesArray.add("Pays");
+            categoriesArray.add("Prénom");
+            
+            // Build HTTP request
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(SERVER_URL + "/create"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
+                .build();
+            
+            // Send request asynchronously
+            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .thenAccept(this::handleCreateSessionResponse)
+                .exceptionally(this::handleAPIError);
+                
+        } catch (Exception e) {
+            Platform.runLater(() -> {
+                showError("Erreur lors de la création: " + e.getMessage());
+                connectionStatusLabel.setText("❌ Erreur de création");
+            });
         }
     }
-
-    private void removePlayer(Player player) {
-        players.remove(player);
-        updateUI();
+    
+    private void joinSessionViaAPI() {
+        try {
+            // Create JSON request body
+            ObjectNode requestBody = objectMapper.createObjectNode();
+            requestBody.put("sessionId", sessionId);
+            requestBody.put("playerUsername", playerName);  // Server expects playerUsername
+            
+            // Build HTTP request
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(SERVER_URL + "/join"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
+                .build();
+            
+            // Send request asynchronously
+            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .thenAccept(this::handleJoinSessionResponse)
+                .exceptionally(this::handleAPIError);
+                
+        } catch (Exception e) {
+            Platform.runLater(() -> {
+                showError("Erreur lors de la connexion: " + e.getMessage());
+                connectionStatusLabel.setText("❌ Erreur de connexion");
+            });
+        }
     }
-
-    private void updateUI() {
-        if (playersPane != null) {
-            playersPane.getChildren().clear();
-
-            // Create player cards
-            String[] colors = {"#e94560", "#4ecca3", "#ffd93d", "#6c5ce7", "#00cec9", "#fd79a8", "#a29bfe", "#ff7675"};
-            int colorIndex = 0;
-
-            for (Player player : players) {
-                VBox card = createPlayerCard(player, colors[colorIndex % colors.length]);
-                playersPane.getChildren().add(card);
-                colorIndex++;
+    
+    private void handleCreateSessionResponse(String responseBody) {
+        Platform.runLater(() -> {
+            try {
+                System.out.println("[API] Create session response: " + responseBody);
+                JsonNode response = objectMapper.readTree(responseBody);
+                
+                // Server returns CreateSessionResponse with sessionId field
+                JsonNode sessionIdNode = response.get("sessionId");
+                if (sessionIdNode == null || sessionIdNode.isNull()) {
+                    showError("Réponse serveur invalide: sessionId manquant");
+                    return;
+                }
+                
+                String newSessionId = sessionIdNode.asText();
+                if (newSessionId == null || newSessionId.trim().isEmpty()) {
+                    showError("Session ID vide reçu du serveur");
+                    return;
+                }
+                
+                this.sessionId = newSessionId;
+                
+                System.out.println("[LOBBY] Host created session: " + newSessionId);
+                
+                // Update UI
+                connectionStatusLabel.setText("✅ Hôte - Session: " + newSessionId);
+                sessionIdInput.setText(newSessionId);
+                sessionIdInput.setEditable(false);
+                
+                // Add host to players list
+                connectedPlayers.clear();
+                connectedPlayers.add(playerName + " (Hôte)");
+                
+                // Enable start game button for host
+                startGameButton.setDisable(false);
+                
+                // Update notice
+                noticeLabel.setText("Partie créée! Partagez le code: " + newSessionId);
+                
+            } catch (Exception e) {
+                showError("Erreur lors du traitement de la réponse: " + e.getMessage());
             }
-        }
-
-        updateStartButton();
+        });
     }
-
-    private void updateStartButton() {
-        // Update start button and notice
-        boolean canStart = players.size() >= 2;
-        if (startGameButton != null) {
-            startGameButton.setDisable(!canStart);
-        }
-
-        if (noticeLabel != null) {
-            if (players.isEmpty()) {
-                noticeLabel.setText("Ajoutez au moins 2 joueurs pour commencer");
-                noticeLabel.setStyle("-fx-text-fill: #cccccc; -fx-font-size: 12px;");
-            } else if (players.size() == 1) {
-                noticeLabel.setText("Encore 1 joueur requis");
-                noticeLabel.setStyle("-fx-text-fill: #ffd93d; -fx-font-size: 12px;");
-            } else {
-                noticeLabel.setText("✓ " + players.size() + " joueurs prêts!");
-                noticeLabel.setStyle("-fx-text-fill: #4ecca3; -fx-font-size: 12px;");
+    
+    private void handleJoinSessionResponse(String responseBody) {
+        Platform.runLater(() -> {
+            try {
+                JsonNode response = objectMapper.readTree(responseBody);
+                
+                // Server returns GameStateDTO, check if it contains session info
+                JsonNode statusNode = response.get("status");
+                String status = statusNode != null ? statusNode.asText() : "unknown";
+                
+                System.out.println("[LOBBY] Join response status: " + status);
+                
+                // Update UI for successful join
+                connectionStatusLabel.setText("✅ Connecté - Session: " + sessionId);
+                sessionIdInput.setEditable(false);
+                
+                // Add players to list (simplified for now)
+                connectedPlayers.clear();
+                connectedPlayers.add("Host (Hôte)");
+                connectedPlayers.add(playerName);
+                
+                // Update notice
+                noticeLabel.setText("Rejoint la partie! En attente du démarrage par l'hôte.");
+                
+            } catch (Exception e) {
+                showError("Erreur lors du traitement de la réponse: " + e.getMessage());
             }
-        }
+        });
     }
-
-    private VBox createPlayerCard(Player player, String accentColor) {
-        VBox card = new VBox(8);
-        card.setAlignment(Pos.CENTER);
-        card.setPadding(new Insets(15));
-        card.setPrefWidth(140);
-        card.setStyle(
-            "-fx-background-color: rgba(255, 255, 255, 0.08);" +
-            "-fx-background-radius: 15;" +
-            "-fx-border-color: " + accentColor + ";" +
-            "-fx-border-radius: 15;" +
-            "-fx-border-width: 2;"
-        );
-
-        // Player avatar/icon
-        Label avatar = new Label("👤");
-        avatar.setStyle("-fx-font-size: 32px;");
-
-        // Player name
-        Label nameLabel = new Label(player.getName());
-        nameLabel.setStyle("-fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold;");
-        nameLabel.setWrapText(true);
-        nameLabel.setMaxWidth(120);
-        nameLabel.setAlignment(Pos.CENTER);
-
-        // Remove button
-        Button removeBtn = new Button("✕");
-        removeBtn.setStyle(
-            "-fx-background-color: rgba(255, 107, 107, 0.3);" +
-            "-fx-text-fill: #ff6b6b;" +
-            "-fx-font-size: 10px;" +
-            "-fx-padding: 3 8;" +
-            "-fx-background-radius: 10;" +
-            "-fx-cursor: hand;"
-        );
-        removeBtn.setOnAction(e -> removePlayer(player));
-        removeBtn.setOnMouseEntered(e -> removeBtn.setStyle(
-            "-fx-background-color: #ff6b6b;" +
-            "-fx-text-fill: white;" +
-            "-fx-font-size: 10px;" +
-            "-fx-padding: 3 8;" +
-            "-fx-background-radius: 10;" +
-            "-fx-cursor: hand;"
-        ));
-        removeBtn.setOnMouseExited(e -> removeBtn.setStyle(
-            "-fx-background-color: rgba(255, 107, 107, 0.3);" +
-            "-fx-text-fill: #ff6b6b;" +
-            "-fx-font-size: 10px;" +
-            "-fx-padding: 3 8;" +
-            "-fx-background-radius: 10;" +
-            "-fx-cursor: hand;"
-        ));
-
-        card.getChildren().addAll(avatar, nameLabel, removeBtn);
-        return card;
+    
+    private Void handleAPIError(Throwable throwable) {
+        Platform.runLater(() -> {
+            String errorMessage = throwable.getMessage();
+            System.out.println("[API] Error: " + errorMessage);
+            
+            // Handle specific error types
+            if (throwable.getCause() != null) {
+                System.out.println("[API] Cause: " + throwable.getCause().getMessage());
+            }
+            
+            // User-friendly error messages
+            String userMessage = "Erreur serveur";
+            if (errorMessage != null) {
+                if (errorMessage.contains("Connection refused") || errorMessage.contains("ConnectException")) {
+                    userMessage = "Serveur non accessible. V\u00e9rifiez que le serveur est d\u00e9marr\u00e9.";
+                } else if (errorMessage.contains("timeout") || errorMessage.contains("timed out")) {
+                    userMessage = "Timeout de connexion. Serveur trop lent \u00e0 r\u00e9pondre.";
+                } else {
+                    userMessage = "Erreur serveur: " + errorMessage;
+                }
+            }
+            
+            showError(userMessage);
+            connectionStatusLabel.setText("❌ Erreur serveur");
+        });
+        return null;
     }
-
+    
     @FXML
     private void handleStartGame() {
-        if (players.size() < 2) return;
-
-        // Redirect to new game configuration system instead of direct game launch
+        if (!isHost) {
+            showError("Seul l'hôte peut démarrer la partie");
+            return;
+        }
+        
+        if (connectedPlayers.size() < 1) {
+            showError("Pas assez de joueurs");
+            return;
+        }
+        
         try {
-            Stage stage = (Stage) startGameButton.getScene().getWindow();
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/GameConfigurationView.fxml"));
+            // Create JSON request body for starting game
+            ObjectNode requestBody = objectMapper.createObjectNode();
+            requestBody.put("sessionId", sessionId);
+            
+            // Build HTTP request
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(SERVER_URL + "/start"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
+                .build();
+            
+            System.out.println("[REST] Sending START_GAME request");
+            noticeLabel.setText("Démarrage de la partie...");
+            startGameButton.setDisable(true);
+            
+            // Send request asynchronously
+            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .thenAccept(this::handleStartGameResponse)
+                .exceptionally(this::handleAPIError);
+            
+        } catch (Exception e) {
+            showError("Erreur lors du démarrage: " + e.getMessage());
+        }
+    }
+    
+    private void handleStartGameResponse(String responseBody) {
+        Platform.runLater(() -> {
+            try {
+                JsonNode response = objectMapper.readTree(responseBody);
+                System.out.println("[LOBBY] Game started via REST API");
+                
+                // Navigate to game screen
+                navigateToGameScreen();
+                
+            } catch (Exception e) {
+                showError("Erreur lors du traitement de la réponse: " + e.getMessage());
+            }
+        });
+    }
+    
+    private void navigateToGameScreen() {
+        try {
+            Stage stage = (Stage) createGameButton.getScene().getWindow();
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/Game.fxml"));
             Parent root = loader.load();
             Scene scene = new Scene(root, 1000, 750);
             
+            // Apply current theme
             if (darkMode) {
                 scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-dark.css").toExternalForm());
             } else {
                 scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-light.css").toExternalForm());
-            }
-            
-            // Configure the GameConfigurationController with local mode and players
-            Object controller = loader.getController();
-            if (controller instanceof GameConfigurationController gcc) {
-                gcc.setDarkMode(darkMode);
-                gcc.setGameMode(GameConfig.GameMode.LOCAL);
-                
-                // Pre-populate with existing players
-                List<String> playerNames = new ArrayList<>();
-                for (Player player : players) {
-                    playerNames.add(player.getName());
-                }
-                // Note: The GameConfigurationController would need a method to accept pre-configured players
-                // This is a design improvement for the future
             }
             
             stage.setScene(scene);
             stage.show();
             
         } catch (IOException e) {
-            e.printStackTrace();
-            
-            // Fallback: Show message about using new configuration
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Nouvelle Interface");
-            alert.setHeaderText("Configuration Améliorée");
-            alert.setContentText("Veuillez utiliser le nouveau système de configuration de partie depuis le menu principal (Mode Multijoueur).");
-            alert.showAndWait();
+            showError("Erreur lors du chargement de l'écran de jeu: " + e.getMessage());
         }
     }
-
-    public void setDarkMode(boolean dark) {
-        this.darkMode = dark;
-    }
-
+    
     @FXML
     private void handleBackToMenu() {
         try {
-            Stage stage = (Stage) (playersPane != null ? playersPane.getScene() : startGameButton.getScene()).getWindow();
+            Stage stage = (Stage) createGameButton.getScene().getWindow();
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/MainMenu.fxml"));
             Parent root = loader.load();
-            Scene scene = new Scene(root, 900, 700);
+            Scene scene = new Scene(root, 1000, 750);
             
+            // Apply current theme
             if (darkMode) {
                 scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-dark.css").toExternalForm());
             } else {
                 scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-light.css").toExternalForm());
             }
             
-            // Configure the MainMenuController
+            // Pass dark mode setting back to main menu
             Object controller = loader.getController();
             if (controller instanceof MainMenuController mmc) {
                 mmc.setDarkMode(darkMode);
@@ -276,8 +381,12 @@ public class MultiplayerLobbyController {
             e.printStackTrace();
         }
     }
-
-    public static List<Player> getGamePlayers() {
-        return gamePlayers;
+    
+    private void showError(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Erreur");
+        alert.setHeaderText("Une erreur s'est produite");
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 }

@@ -56,6 +56,8 @@
             onAction="#handleStartSolo" styleClass="menu-button" prefWidth="280"/>
         <Button fx:id="startMultiplayerButton" text="👥  Multiplayer Mode" 
             onAction="#handleStartMultiplayer" styleClass="multiplayer-button" prefWidth="280"/>
+        <Button fx:id="remoteMultiplayerButton" text="🌐  Multijoueur à distance" 
+            onAction="#handleRemoteMultiplayer" styleClass="secondary-button" prefWidth="280"/>
         <Button fx:id="howToPlayButton" text="📖  How to Play" 
             onAction="#handleHowToPlay" styleClass="secondary-button" prefWidth="280"/>
         <HBox spacing="15" alignment="CENTER">

@@ -1,5 +1,75 @@
 package com.baccalaureat.controller;
 
+/*
+ * MULTIPLAYER MANUAL TEST CHECKLIST
+ * 
+ * HOW TO TEST REMOTE MULTIPLAYER WITH TWO JavaFX CLIENTS:
+ * 
+ * 1. START SERVER:
+ *    - Navigate to bac-game-server directory
+ *    - Run: .\mvnw.cmd spring-boot:run
+ *    - Verify server starts on localhost:8080
+ * 
+ * 2. START TWO JavaFX CLIENTS:
+ *    - Open two terminal windows in java-game-school directory
+ *    - Run in both: mvn javafx:run
+ *    - Both clients should show main menu
+ * 
+ * 3. TEST SCENARIO - HOST CREATES SESSION:
+ *    - CLIENT 1: Click "Multijoueur" button
+ *    - CLIENT 1: Click "Se connecter au serveur"
+ *    - CLIENT 1: Verify connection status shows "Connecté"
+ *    - CLIENT 1: Click "Créer une partie"
+ *    - CLIENT 1: Verify session ID appears (e.g., "ABC123")
+ *    - CLIENT 1: Verify status shows "Hôte" (Host)
+ * 
+ * 4. TEST SCENARIO - REMOTE PLAYER JOINS:
+ *    - CLIENT 2: Click "Multijoueur" button
+ *    - CLIENT 2: Click "Se connecter au serveur"
+ *    - CLIENT 2: Verify connection status shows "Connecté"
+ *    - CLIENT 2: Enter session ID from CLIENT 1
+ *    - CLIENT 2: Click "Rejoindre la partie"
+ *    - CLIENT 1: Verify player list shows both players
+ *    - CLIENT 2: Verify player list shows both players
+ * 
+ * 5. TEST SCENARIO - GAME START:
+ *    - CLIENT 1 (Host): Click "Commencer la partie"
+ *    - BOTH CLIENTS: Verify navigation to game screen
+ *    - BOTH CLIENTS: Verify same letter displayed
+ *    - BOTH CLIENTS: Verify same categories shown
+ *    - BOTH CLIENTS: Verify countdown timer starts
+ * 
+ * 6. TEST SCENARIO - ROUND END:
+ *    - BOTH CLIENTS: Enter answers or wait for timer
+ *    - BOTH CLIENTS: Verify timer stops exactly once
+ *    - BOTH CLIENTS: Verify round ends exactly once
+ *    - BOTH CLIENTS: Verify results dialog appears exactly once
+ * 
+ * 7. TEST SCENARIO - RESULTS & NAVIGATION:
+ *    - BOTH CLIENTS: Verify results dialog is scrollable
+ *    - BOTH CLIENTS: Verify "Next Round" and "Back to Lobby" buttons
+ *    - CLIENT 1: Click "Back to Lobby"
+ *    - CLIENT 2: Click "Back to Lobby"
+ *    - BOTH CLIENTS: Verify return to multiplayer lobby
+ * 
+ * EXPECTED DIAGNOSTIC LOGS:
+ * [WS] Connected
+ * [LOBBY] Host created session
+ * [LOBBY] Player joined session
+ * [GAME] GAME_STARTED received
+ * [SYNC] Letter and categories applied
+ * [TIMER] Started
+ * [TIMER] Stopped
+ * [ROUND] Ended
+ * [RESULTS] Received
+ * [DIALOG] Results displayed
+ * 
+ * SAFETY WARNINGS TO WATCH FOR:
+ * [WARN] Duplicate call prevented - multiple timers
+ * [WARN] Duplicate call prevented - multiple round endings
+ * [WARN] Duplicate call prevented - multiple result dialogs
+ */
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,7 +85,10 @@ import com.baccalaureat.model.Player;
 import com.baccalaureat.model.RoundState;
 import com.baccalaureat.model.ValidationResult;
 import com.baccalaureat.model.ValidationStatus;
+import com.baccalaureat.multiplayer.MultiplayerEventListener;
+import com.baccalaureat.multiplayer.MultiplayerService;
 import com.baccalaureat.service.ValidationService;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.ScaleTransition;
@@ -38,8 +111,14 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
-public class MultiplayerGameController {
+public class MultiplayerGameController implements MultiplayerEventListener {
     private boolean darkMode = false;
+    private MultiplayerService multiplayerService;
+    
+    // SAFETY GUARDS - Prevent duplicate operations
+    private boolean countdownStarted = false;
+    private boolean roundEnded = false;
+    private boolean resultsDialogShown = false;
     @FXML private Label letterLabel;
     @FXML private Label timerLabel;
     @FXML private Label roundLabel;
@@ -316,6 +395,14 @@ public class MultiplayerGameController {
     }
 
     private void startCountdown() {
+        // SAFETY GUARD - Prevent multiple countdown timers
+        if (countdownStarted) {
+            System.out.println("[WARN] Duplicate call prevented - startCountdown() already called");
+            return;
+        }
+        countdownStarted = true;
+        System.out.println("[TIMER] Started - Duration: " + remainingSeconds + "s");
+        
         if (countdown != null) countdown.stop();
 
         countdown = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
@@ -329,6 +416,7 @@ public class MultiplayerGameController {
 
             if (remainingSeconds <= 0) {
                 countdown.stop();
+                System.out.println("[TIMER] Stopped - Time expired");
                 roundState = RoundState.FINISHED; // Mark round as finished
                 handleValidate();
             }
@@ -570,5 +658,292 @@ public class MultiplayerGameController {
         int m = seconds / 60;
         int s = seconds % 60;
         return "%02d:%02d".formatted(m, s);
+    }
+    
+    /**
+     * Initialize multiplayer game with server-provided data.
+     * This integrates remote multiplayer with existing game logic.
+     */
+    public void initializeMultiplayerGame(MultiplayerService multiplayerService, 
+                                          String letter, List<String> categoryNames, int duration) {
+        System.out.println("[GAME] GAME_STARTED received - Letter: " + letter + ", Categories: " + categoryNames.size() + ", Duration: " + duration + "s");
+        
+        // RESET SAFETY GUARDS for new game
+        countdownStarted = false;
+        roundEnded = false;
+        resultsDialogShown = false;
+        
+        this.multiplayerService = multiplayerService;
+        this.multiplayerService.addEventListener(this);
+        
+        // Create players list (only local player for now)
+        List<Player> multiplayerPlayers = new ArrayList<>();
+        String localPlayerName = multiplayerService.getCurrentPlayerName();
+        if (localPlayerName != null) {
+            multiplayerPlayers.add(new Player(localPlayerName));
+        } else {
+            multiplayerPlayers.add(new Player("Joueur"));
+        }
+        
+        // Convert category names to Category objects
+        List<Category> gameCategories = new ArrayList<>();
+        for (String catName : categoryNames) {
+            // Create Category with minimal info - server should provide proper category data
+            gameCategories.add(new Category(catName, catName, "📝", "Catégorie: " + catName));
+        }
+        
+        // Initialize game session with server-provided data
+        this.players = multiplayerPlayers;
+        this.categories = gameCategories;
+        this.currentLetter = letter.toUpperCase();
+        this.totalSeconds = duration;
+        this.remainingSeconds = duration;
+        this.totalRounds = 1; // Single round for now
+        this.currentRound = 1;
+        
+        System.out.println("[SYNC] Letter and categories applied - Letter: " + currentLetter + ", Categories count: " + categories.size());
+        
+        // Create game session using existing game logic
+        this.session = new GameSession();
+        // Note: In multiplayer, GameSession is only used for basic game state
+        // Server manages the actual game flow, letter, and categories
+        
+        // Initialize UI
+        initializeUI();
+        
+        // Start the round
+        startPlayerTurn();
+    }
+    
+    /**
+     * Initialize UI components
+     */
+    private void initializeUI() {
+        // Display letter
+        if (letterLabel != null) {
+            letterLabel.setText(currentLetter);
+        }
+        
+        // Display round info
+        if (roundLabel != null) {
+            roundLabel.setText("Manche " + currentRound + "/" + totalRounds);
+        }
+        
+        // Display current player
+        if (currentPlayerLabel != null && !players.isEmpty()) {
+            currentPlayerLabel.setText("Joueur: " + players.get(currentPlayerIndex).getName());
+        }
+        
+        // Setup categories
+        setupCategoriesUI();
+        
+        // Setup scores bar
+        setupScoresBar();
+    }
+    
+    /**
+     * Setup categories input fields
+     */
+    private void setupCategoriesUI() {
+        if (categoriesContainer == null) return;
+        
+        categoriesContainer.getChildren().clear();
+        inputFields.clear();
+        statusLabels.clear();
+        
+        for (Category category : categories) {
+            VBox categoryBox = new VBox(10);
+            categoryBox.setPadding(new Insets(15));
+            categoryBox.setStyle(
+                "-fx-background-color: rgba(255, 255, 255, 0.05);" +
+                "-fx-background-radius: 10;" +
+                "-fx-border-color: rgba(255, 255, 255, 0.1);" +
+                "-fx-border-radius: 10;" +
+                "-fx-border-width: 1;"
+            );
+            
+            // Category name
+            Label categoryLabel = new Label(category.getName());
+            categoryLabel.setStyle("-fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold;");
+            
+            // Input field
+            TextField input = new TextField();
+            input.setPromptText("Commence par " + currentLetter + "...");
+            input.setStyle("-fx-font-size: 14px;");
+            HBox.setHgrow(input, Priority.ALWAYS);
+            
+            // Status label
+            Label statusLabel = new Label();
+            statusLabel.setStyle("-fx-font-size: 12px;");
+            
+            inputFields.put(category, input);
+            statusLabels.put(category, statusLabel);
+            
+            HBox inputRow = new HBox(10, input, statusLabel);
+            inputRow.setAlignment(Pos.CENTER_LEFT);
+            
+            categoryBox.getChildren().addAll(categoryLabel, inputRow);
+            categoriesContainer.getChildren().add(categoryBox);
+        }
+    }
+    
+    /**
+     * Create score card for multiplayer with default color
+     */
+    private VBox createScoreCard(Player player) {
+        return createScoreCard(player, "#4ecca3"); // Default green color for multiplayer
+    }
+    
+    /**
+     * MultiplayerEventListener implementation
+     */
+    @Override
+    public void onRoundEnded() {
+        javafx.application.Platform.runLater(() -> {
+            // SAFETY GUARD - Prevent multiple round endings
+            if (roundEnded) {
+                System.out.println("[WARN] Duplicate call prevented - onRoundEnded() already called");
+                return;
+            }
+            roundEnded = true;
+            System.out.println("[ROUND] Ended - Server triggered round end");
+            
+            // Stop timer
+            if (countdown != null) {
+                countdown.stop();
+                System.out.println("[TIMER] Stopped - Server round end");
+            }
+            
+            // Collect and submit answers
+            submitAnswersToServer();
+        });
+    }
+    
+    @Override
+    public void onResultsReceived(JsonNode results) {
+        javafx.application.Platform.runLater(() -> {
+            // SAFETY GUARD - Prevent multiple result dialogs
+            if (resultsDialogShown) {
+                System.out.println("[WARN] Duplicate call prevented - onResultsReceived() already called");
+                return;
+            }
+            resultsDialogShown = true;
+            System.out.println("[RESULTS] Received - Data from server: " + (results != null ? results.size() + " fields" : "null"));
+            
+            // Display results dialog
+            showMultiplayerResults(results);
+        });
+    }
+    
+    @Override
+    public void onError(String errorMessage) {
+        javafx.application.Platform.runLater(() -> {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Erreur multijoueur");
+            alert.setHeaderText("Une erreur s'est produite");
+            alert.setContentText(errorMessage);
+            alert.showAndWait();
+        });
+    }
+    
+    /**
+     * Submit player answers to server at round end
+     */
+    private void submitAnswersToServer() {
+        Map<String, String> answers = new HashMap<>();
+        
+        for (Map.Entry<Category, TextField> entry : inputFields.entrySet()) {
+            String categoryName = entry.getKey().getName();
+            String answer = entry.getValue().getText().trim();
+            if (!answer.isEmpty()) {
+                answers.put(categoryName, answer);
+            }
+        }
+        
+        System.out.println("[ROUND] Submitting " + answers.size() + " answers to server");
+        if (multiplayerService != null) {
+            multiplayerService.submitAnswers(answers);
+        }
+    }
+    
+    /**
+     * Display multiplayer results dialog
+     */
+    private void showMultiplayerResults(JsonNode results) {
+        System.out.println("[DIALOG] Results displayed");
+        
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Résultats de la manche");
+        alert.setHeaderText("Fin de la manche!");
+        alert.setResizable(true);
+        
+        // Parse and display results
+        StringBuilder content = new StringBuilder();
+        content.append("=== RÉSULTATS MULTIJOUEUR ===\n\n");
+        
+        if (results != null && results.isObject()) {
+            content.append("Données reçues du serveur:\n");
+            results.fieldNames().forEachRemaining(field -> {
+                content.append("• ").append(field).append(": ").append(results.get(field).asText()).append("\n");
+            });
+        } else {
+            content.append("Résultats envoyés au serveur.\n");
+            content.append("En attente des résultats des autres joueurs...\n");
+        }
+        
+        content.append("\n=== VOS RÉPONSES ===\n");
+        for (Map.Entry<Category, TextField> entry : inputFields.entrySet()) {
+            String categoryName = entry.getKey().getName();
+            String answer = entry.getValue().getText().trim();
+            content.append("• ").append(categoryName).append(": ");
+            content.append(answer.isEmpty() ? "(pas de réponse)" : answer).append("\n");
+        }
+        
+        alert.setContentText(content.toString());
+        
+        // Add custom buttons
+        ButtonType nextRoundBtn = new ButtonType("Manche suivante");
+        ButtonType backToLobbyBtn = new ButtonType("Retour au lobby");
+        alert.getButtonTypes().setAll(nextRoundBtn, backToLobbyBtn);
+        
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent()) {
+            if (result.get() == nextRoundBtn) {
+                System.out.println("[NAV] Next Round clicked - feature not implemented yet");
+                handleBackToLobby(); // For now, go back to lobby
+            } else if (result.get() == backToLobbyBtn) {
+                System.out.println("[NAV] Back to Lobby clicked");
+                handleBackToLobby();
+            }
+        }
+    }
+    
+    /**
+     * Return to multiplayer lobby
+     */
+    private void handleBackToLobby() {
+        System.out.println("[NAV] Returning to multiplayer lobby");
+        try {
+            Stage stage = (Stage) letterLabel.getScene().getWindow();
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/MultiplayerLobby.fxml"));
+            Parent root = loader.load();
+            Scene scene = new Scene(root, 1000, 750);
+            
+            if (darkMode) {
+                scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-dark.css").toExternalForm());
+            } else {
+                scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-light.css").toExternalForm());
+            }
+            
+            Object controller = loader.getController();
+            if (controller instanceof MultiplayerLobbyController mlc) {
+                mlc.setDarkMode(darkMode);
+            }
+            
+            stage.setScene(scene);
+            stage.show();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
