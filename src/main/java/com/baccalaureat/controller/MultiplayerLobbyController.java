@@ -10,6 +10,8 @@ import java.util.List;
 
 import com.baccalaureat.multiplayer.MultiplayerEventListener;
 import com.baccalaureat.multiplayer.MultiplayerService;
+import com.baccalaureat.util.DialogHelper;
+import com.baccalaureat.util.ThemeManager;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -21,7 +23,6 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
@@ -418,22 +419,8 @@ public class MultiplayerLobbyController implements MultiplayerEventListener {
             Stage stage = (Stage) createGameButton.getScene().getWindow();
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/MainMenu.fxml"));
             Parent root = loader.load();
-            Scene scene = new Scene(root, 1000, 750);
             
-            // Apply current theme
-            if (darkMode) {
-                scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-dark.css").toExternalForm());
-            } else {
-                scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-light.css").toExternalForm());
-            }
-            
-            // Pass dark mode setting back to main menu
-            Object controller = loader.getController();
-            if (controller instanceof MainMenuController mmc) {
-                mmc.setDarkMode(darkMode);
-            }
-            
-            stage.setScene(scene);
+            ThemeManager.switchToFullScreenScene(stage, root);
             stage.show();
         } catch (IOException e) {
             e.printStackTrace();
@@ -713,11 +700,7 @@ public class MultiplayerLobbyController implements MultiplayerEventListener {
     }
     
     private void showError(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Erreur");
-        alert.setHeaderText("Une erreur s'est produite");
-        alert.setContentText(message);
-        alert.showAndWait();
+        DialogHelper.showError("Erreur", "Une erreur s'est produite", message);
     }
     
     // MultiplayerEventListener implementation

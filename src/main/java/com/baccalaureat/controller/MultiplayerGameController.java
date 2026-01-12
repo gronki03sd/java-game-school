@@ -84,10 +84,11 @@ import com.baccalaureat.model.GameSession;
 import com.baccalaureat.model.Player;
 import com.baccalaureat.model.RoundState;
 import com.baccalaureat.model.ValidationResult;
-import com.baccalaureat.model.ValidationStatus;
 import com.baccalaureat.multiplayer.MultiplayerEventListener;
 import com.baccalaureat.multiplayer.MultiplayerService;
 import com.baccalaureat.service.ValidationService;
+import com.baccalaureat.util.DialogHelper;
+import com.baccalaureat.util.ThemeManager;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import javafx.animation.KeyFrame;
@@ -101,6 +102,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
@@ -499,14 +501,13 @@ public class MultiplayerGameController implements MultiplayerEventListener {
     }
 
     private void showTurnResult(Player player, int points) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Tour terminé");
-        alert.setHeaderText(player.getName() + (points > 0 ? " - Bravo! 🎉" : " - Dommage! 😅"));
-        alert.setContentText("Points gagnés: +" + points + "\nScore total: " + player.getScore());
-
-        ButtonType nextBtn = new ButtonType("Continuer →");
-        alert.getButtonTypes().setAll(nextBtn);
-        alert.showAndWait();
+        ButtonType nextBtn = new ButtonType("Continuer →", ButtonBar.ButtonData.OK_DONE);
+        DialogHelper.showConfirmation(
+            "Tour terminé",
+            player.getName() + (points > 0 ? " - Bravo! 🎉" : " - Dommage! 😅"),
+            "Points gagnés: +" + points + "\nScore total: " + player.getScore(),
+            nextBtn
+        );
 
         proceedToNext();
     }
@@ -551,14 +552,13 @@ public class MultiplayerGameController implements MultiplayerEventListener {
             rank++;
         }
 
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Fin de manche");
-        alert.setHeaderText("Manche " + (currentRound - 1) + " terminée!");
-        alert.setContentText(sb.toString() + "\nProchaine lettre: " + currentLetter);
-
-        ButtonType nextRound = new ButtonType("Manche " + currentRound + " →");
-        alert.getButtonTypes().setAll(nextRound);
-        alert.showAndWait();
+        ButtonType nextRound = new ButtonType("Manche " + currentRound + " →", ButtonBar.ButtonData.OK_DONE);
+        DialogHelper.showConfirmation(
+            "Fin de manche",
+            "Manche " + (currentRound - 1) + " terminée!",
+            sb.toString() + "\nProchaine lettre: " + currentLetter,
+            nextRound
+        );
 
         setupUI();
         startPlayerTurn();
@@ -586,16 +586,15 @@ public class MultiplayerGameController implements MultiplayerEventListener {
             rank++;
         }
 
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("🏆 Partie terminée!");
-        alert.setHeaderText("👑 " + winner.getName() + " gagne avec " + winner.getScore() + " points!");
-        alert.setContentText("Classement final:\n\n" + sb.toString());
-
-        ButtonType playAgain = new ButtonType("Rejouer");
-        ButtonType menu = new ButtonType("Menu principal");
-        alert.getButtonTypes().setAll(playAgain, menu);
-
-        Optional<ButtonType> result = alert.showAndWait();
+        ButtonType playAgain = new ButtonType("Rejouer", ButtonBar.ButtonData.OK_DONE);
+        ButtonType menu = new ButtonType("Menu principal", ButtonBar.ButtonData.CANCEL_CLOSE);
+        
+        Optional<ButtonType> result = DialogHelper.showConfirmation(
+            "🏆 Partie terminée!",
+            "👑 " + winner.getName() + " gagne avec " + winner.getScore() + " points!",
+            "Classement final:\n\n" + sb.toString(),
+            playAgain, menu
+        );
         if (result.isPresent() && result.get() == playAgain) {
             restartGame();
         } else {
@@ -621,7 +620,7 @@ public class MultiplayerGameController implements MultiplayerEventListener {
         try {
             Stage stage = (Stage) letterLabel.getScene().getWindow();
             Parent root = FXMLLoader.load(getClass().getResource("/com/baccalaureat/MainMenu.fxml"));
-            stage.setScene(new Scene(root, 900, 700));
+            ThemeManager.switchToFullScreenScene(stage, root);
             stage.show();
         } catch (IOException e) {
             e.printStackTrace();
@@ -868,11 +867,7 @@ public class MultiplayerGameController implements MultiplayerEventListener {
     @Override
     public void onError(String errorMessage) {
         javafx.application.Platform.runLater(() -> {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("Erreur multijoueur");
-            alert.setHeaderText("Une erreur s'est produite");
-            alert.setContentText(errorMessage);
-            alert.showAndWait();
+            DialogHelper.showError("Erreur multijoueur", "Une erreur s'est produite", errorMessage);
         });
     }
     
@@ -902,9 +897,12 @@ public class MultiplayerGameController implements MultiplayerEventListener {
     private void showMultiplayerResults(JsonNode results) {
         System.out.println("[DIALOG] Results displayed");
         
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Résultats de la manche");
-        alert.setHeaderText("Fin de la manche!");
+        Alert alert = DialogHelper.createStyledAlert(
+            Alert.AlertType.INFORMATION,
+            "Résultats de la manche",
+            "Fin de la manche!",
+            ""
+        );
         alert.setResizable(true);
         
         // Parse and display results

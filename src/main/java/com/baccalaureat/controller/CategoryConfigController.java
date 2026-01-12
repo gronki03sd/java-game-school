@@ -17,6 +17,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import com.baccalaureat.util.DialogHelper;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -314,14 +315,13 @@ public class CategoryConfigController implements Initializable {
             return;
         }
         
-        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmation.setTitle("Delete category");
-        confirmation.setHeaderText("Are you sure?");
-        confirmation.setContentText("This action will permanently delete the category \"" + category.getDisplayName() + 
-                                   "\".");
+        boolean confirmed = DialogHelper.showConfirmation(
+            "Delete category",
+            "Are you sure?",
+            "This action will permanently delete the category \"" + category.getDisplayName() + "\"."
+        );
         
-        Optional<ButtonType> result = confirmation.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
+        if (confirmed) {
             boolean success = categoryService.deleteCategory(category.getId());
             if (success) {
                 showStatus("Catégorie supprimée avec succès !", false);

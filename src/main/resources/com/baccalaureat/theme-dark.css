@@ -1,38 +1,856 @@
-/* DARK MODE THEME */
+/* ========================================
+   BACCALAURÉAT+ DARK THEME
+   Gray backgrounds with Mint Green accents
+   Primary: Mint Green (#4ecca3)
+   Background: Dark Gray (#2d3436, #353b48)
+   ======================================== */
+
+/* ========================================
+   ROOT & GLOBAL STYLES
+   ======================================== */
 .root {
-    -fx-background-color: #19183B;
+    -fx-background-color: #2d3436;
+    -fx-font-family: 'Segoe UI', Arial, sans-serif;
 }
-.main-menu, .game-container, .lobby-container {
-    -fx-background-color: #19183B;
+
+/* ========================================
+   FONT SIZE SCALING
+   ======================================== */
+.font-size-small {
+    -fx-font-size: 12px;
 }
-.menu-button, .action-button, .add-player-button {
-    -fx-background-color: #E7F2EF;
-    -fx-text-fill: #19183B;
+
+.font-size-small .game-title {
+    -fx-font-size: 42px;
 }
-.menu-button:hover, .action-button:hover, .add-player-button:hover {
-    -fx-background-color: #A1C2BD;
-    -fx-text-fill: #19183B;
+
+.font-size-small .section-title {
+    -fx-font-size: 16px;
 }
-.secondary-button, .back-button, .remove-player-button {
-    -fx-background-color: #708993;
-    -fx-text-fill: #E7F2EF;
+
+.font-size-small .label {
+    -fx-font-size: 12px;
 }
-.secondary-button:hover, .back-button:hover, .remove-player-button:hover {
-    -fx-background-color: #A1C2BD;
-    -fx-text-fill: #19183B;
+
+.font-size-small .button {
+    -fx-font-size: 12px;
 }
-.info-card, .player-card, .category-card {
-    -fx-background-color: #708993;
-    -fx-text-fill: #E7F2EF;
+
+.font-size-medium {
+    -fx-font-size: 14px;
 }
+
+.font-size-medium .game-title {
+    -fx-font-size: 52px;
+}
+
+.font-size-medium .section-title {
+    -fx-font-size: 18px;
+}
+
+.font-size-large {
+    -fx-font-size: 16px;
+}
+
+.font-size-large .game-title {
+    -fx-font-size: 62px;
+}
+
+.font-size-large .section-title {
+    -fx-font-size: 22px;
+}
+
+.font-size-large .label {
+    -fx-font-size: 16px;
+}
+
+.font-size-large .button {
+    -fx-font-size: 16px;
+}
+
+/* ========================================
+   MAIN MENU
+   ======================================== */
+.main-menu {
+    -fx-background-color: linear-gradient(to bottom right, #2d3436, #353b48);
+    -fx-padding: 50;
+}
+
+.game-title {
+    -fx-font-size: 52px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f5f7fa;
+}
+
+.subtitle {
+    -fx-font-size: 16px;
+    -fx-text-fill: #b2bec3;
+    -fx-font-style: italic;
+}
+
+/* ========================================
+   BUTTONS
+   ======================================== */
+.button {
+    -fx-background-color: #4ecca3;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 12 30;
+    -fx-background-radius: 25;
+    -fx-cursor: hand;
+}
+
+.button:hover {
+    -fx-background-color: #45b393;
+}
+
+.button:pressed {
+    -fx-background-color: #3da085;
+}
+
+.menu-button {
+    -fx-background-color: #4ecca3;
+    -fx-text-fill: white;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-padding: 16 45;
+    -fx-background-radius: 30;
+    -fx-cursor: hand;
+}
+
+.menu-button:hover {
+    -fx-background-color: #45b393;
+}
+
+.menu-button:pressed {
+    -fx-background-color: #3da085;
+}
+
+.multiplayer-button {
+    -fx-background-color: #353b48;
+    -fx-text-fill: #4ecca3;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-padding: 16 45;
+    -fx-background-radius: 30;
+    -fx-border-color: #4ecca3;
+    -fx-border-width: 2;
+    -fx-border-radius: 30;
+    -fx-cursor: hand;
+}
+
+.multiplayer-button:hover {
+    -fx-background-color: #4ecca3;
+    -fx-text-fill: white;
+}
+
+.secondary-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #b2bec3;
+    -fx-font-size: 14px;
+    -fx-border-color: #636e72;
+    -fx-border-width: 2;
+    -fx-border-radius: 20;
+    -fx-background-radius: 20;
+    -fx-padding: 10 30;
+    -fx-cursor: hand;
+}
+
+.secondary-button:hover {
+    -fx-background-color: #353b48;
+    -fx-text-fill: #4ecca3;
+    -fx-border-color: #4ecca3;
+}
+
+.action-button {
+    -fx-background-color: #4ecca3;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 10 25;
+    -fx-background-radius: 20;
+    -fx-cursor: hand;
+}
+
+.action-button:hover {
+    -fx-background-color: #45b393;
+}
+
+.danger-button {
+    -fx-background-color: #ff4757;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 10 25;
+    -fx-background-radius: 20;
+    -fx-cursor: hand;
+}
+
+.danger-button:hover {
+    -fx-background-color: #e63946;
+}
+
+.icon-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #4ecca3;
+    -fx-cursor: hand;
+    -fx-padding: 8;
+}
+
+.icon-button:hover {
+    -fx-background-color: rgba(78, 204, 163, 0.1);
+    -fx-background-radius: 50%;
+}
+
+.back-button {
+    -fx-background-color: #636e72;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-padding: 10 25;
+    -fx-background-radius: 20;
+    -fx-cursor: hand;
+}
+
+.back-button:hover {
+    -fx-background-color: #4ecca3;
+}
+
+/* ========================================
+   TEXT FIELDS & INPUTS
+   ======================================== */
+.text-field {
+    -fx-background-color: #353b48;
+    -fx-text-fill: #f5f7fa;
+    -fx-prompt-text-fill: #636e72;
+    -fx-font-size: 14px;
+    -fx-padding: 12 15;
+    -fx-background-radius: 8;
+    -fx-border-color: #636e72;
+    -fx-border-width: 2;
+    -fx-border-radius: 8;
+}
+
+.text-field:focused {
+    -fx-border-color: #4ecca3;
+    -fx-background-color: #353b48;
+}
+
+.text-area {
+    -fx-background-color: #353b48;
+    -fx-text-fill: #f5f7fa;
+    -fx-font-size: 14px;
+    -fx-padding: 12;
+    -fx-background-radius: 8;
+    -fx-border-color: #636e72;
+    -fx-border-width: 2;
+    -fx-border-radius: 8;
+}
+
+.text-area:focused {
+    -fx-border-color: #4ecca3;
+}
+
+.text-area .content {
+    -fx-background-color: #353b48;
+}
+
+.text-area .scroll-pane {
+    -fx-background-color: #353b48;
+}
+
+.text-area .scroll-pane .viewport {
+    -fx-background-color: #353b48;
+}
+
+/* ========================================
+   LABELS & TEXT
+   ======================================== */
+.label {
+    -fx-text-fill: #f5f7fa;
+    -fx-font-size: 14px;
+}
+
+.title-label {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f5f7fa;
+}
+
+.section-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f5f7fa;
+}
+
+.info-text {
+    -fx-text-fill: #b2bec3;
+    -fx-font-size: 13px;
+}
+
+.success-text {
+    -fx-text-fill: #00b894;
+    -fx-font-weight: bold;
+}
+
+.error-text {
+    -fx-text-fill: #ff4757;
+    -fx-font-weight: bold;
+}
+
+.warning-text {
+    -fx-text-fill: #ffa502;
+    -fx-font-weight: bold;
+}
+
+/* ========================================
+   CARDS & CONTAINERS
+   ======================================== */
+.card {
+    -fx-background-color: #353b48;
+    -fx-background-radius: 12;
+    -fx-padding: 20;
+    -fx-border-color: #636e72;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+}
+
+.info-card {
+    -fx-background-color: #353b48;
+    -fx-background-radius: 15;
+    -fx-padding: 20 30;
+    -fx-border-color: #636e72;
+    -fx-border-width: 1;
+    -fx-border-radius: 15;
+    -fx-min-width: 150;
+}
+
+.info-label {
+    -fx-text-fill: #b2bec3;
+    -fx-font-size: 12px;
+}
+
+.info-value {
+    -fx-text-fill: #4ecca3;
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+}
+
+.player-card {
+    -fx-background-color: #353b48;
+    -fx-background-radius: 12;
+    -fx-padding: 15;
+    -fx-border-color: #636e72;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-spacing: 10;
+}
+
+.category-card {
+    -fx-background-color: #353b48;
+    -fx-background-radius: 10;
+    -fx-padding: 15;
+    -fx-border-color: #636e72;
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+}
+
+/* ========================================
+   GAME CONTAINER
+   ======================================== */
+.game-container {
+    -fx-background-color: #2d3436;
+}
+
+.lobby-container {
+    -fx-background-color: #2d3436;
+}
+
+.header-bar {
+    -fx-background-color: #353b48;
+    -fx-padding: 15 25;
+    -fx-background-radius: 0 0 15 15;
+}
+
+.game-header {
+    -fx-background-color: #353b48;
+    -fx-padding: 20;
+    -fx-background-radius: 10;
+}
+
+/* ========================================
+   LETTER DISPLAY
+   ======================================== */
+.letter-display {
+    -fx-background-color: #4ecca3;
+    -fx-text-fill: white;
+    -fx-font-size: 72px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 20;
+    -fx-padding: 30 60;
+    -fx-border-color: #45b393;
+    -fx-border-width: 3;
+    -fx-border-radius: 20;
+}
+
+/* ========================================
+   TIMER
+   ======================================== */
+.timer-display {
+    -fx-text-fill: #f5f7fa;
+    -fx-font-size: 36px;
+    -fx-font-weight: bold;
+}
+
+.timer-warning {
+    -fx-text-fill: #ffa502;
+}
+
+.timer-critical {
+    -fx-text-fill: #ff4757;
+}
+
+/* ========================================
+   SCORE DISPLAY
+   ======================================== */
+.score-display {
+    -fx-text-fill: #4ecca3;
+    -fx-font-size: 32px;
+    -fx-font-weight: bold;
+}
+
+.player-score {
+    -fx-text-fill: #4ecca3;
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+}
+
+/* ========================================
+   PROGRESS BAR
+   ======================================== */
+.progress-bar {
+    -fx-background-color: #353b48;
+    -fx-background-radius: 10;
+}
+
+.progress-bar .bar {
+    -fx-background-color: #4ecca3;
+    -fx-background-radius: 10;
+    -fx-background-insets: 0;
+}
+
+.progress-bar .track {
+    -fx-background-color: #636e72;
+    -fx-background-radius: 10;
+}
+
+/* ========================================
+   COMBOBOX & CHOICE BOX
+   ======================================== */
+.combo-box {
+    -fx-background-color: #353b48;
+    -fx-background-radius: 8;
+    -fx-border-color: #636e72;
+    -fx-border-width: 2;
+    -fx-border-radius: 8;
+}
+
+.combo-box:focused {
+    -fx-border-color: #4ecca3;
+}
+
+.combo-box .list-cell {
+    -fx-background-color: #353b48;
+    -fx-text-fill: #f5f7fa;
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: #353b48;
+    -fx-border-color: #4ecca3;
+    -fx-border-width: 2;
+}
+
+.combo-box-popup .list-view .list-cell {
+    -fx-background-color: #353b48;
+    -fx-text-fill: #f5f7fa;
+}
+
+.combo-box-popup .list-view .list-cell:hover {
+    -fx-background-color: #4ecca3;
+    -fx-text-fill: white;
+}
+
+.combo-box-popup .list-view .list-cell:selected {
+    -fx-background-color: #4ecca3;
+    -fx-text-fill: white;
+}
+
+.combo-box .arrow-button {
+    -fx-background-color: #4ecca3;
+    -fx-background-radius: 0 8 8 0;
+}
+
+.combo-box .arrow {
+    -fx-background-color: white;
+}
+
+.choice-box {
+    -fx-background-color: #353b48;
+    -fx-text-fill: #f5f7fa;
+    -fx-border-color: #636e72;
+    -fx-border-width: 2;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+}
+
+.choice-box:focused {
+    -fx-border-color: #4ecca3;
+}
+
+/* ========================================
+   CHECKBOX & RADIO BUTTON
+   ======================================== */
+.check-box {
+    -fx-text-fill: #f5f7fa;
+}
+
+.check-box .box {
+    -fx-background-color: #353b48;
+    -fx-border-color: #636e72;
+    -fx-border-width: 2;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.check-box:selected .box {
+    -fx-background-color: #4ecca3;
+    -fx-border-color: #4ecca3;
+}
+
+.check-box:selected .mark {
+    -fx-background-color: white;
+}
+
+.radio-button {
+    -fx-text-fill: #f5f7fa;
+}
+
+.radio-button .radio {
+    -fx-background-color: #353b48;
+    -fx-border-color: #636e72;
+    -fx-border-width: 2;
+    -fx-border-radius: 50%;
+    -fx-background-radius: 50%;
+}
+
+.radio-button:selected .radio {
+    -fx-border-color: #4ecca3;
+}
+
+.radio-button:selected .dot {
+    -fx-background-color: #4ecca3;
+}
+
+/* ========================================
+   SCROLL PANE
+   ======================================== */
+.scroll-pane {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+
+.scroll-pane .scroll-bar:vertical {
+    -fx-background-color: transparent;
+}
+
+.scroll-pane .scroll-bar:horizontal {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: #636e72;
+    -fx-background-radius: 10;
+}
+
+.scroll-bar .thumb:hover {
+    -fx-background-color: #4ecca3;
+}
+
+.scroll-bar .track {
+    -fx-background-color: #353b48;
+    -fx-background-radius: 10;
+}
+
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+/* ========================================
+   LIST VIEW
+   ======================================== */
+.list-view {
+    -fx-background-color: #353b48;
+    -fx-border-color: #636e72;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+}
+
+.list-view .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #f5f7fa;
+    -fx-padding: 10;
+}
+
+.list-view .list-cell:selected {
+    -fx-background-color: #4ecca3;
+    -fx-text-fill: white;
+}
+
+.list-view .list-cell:hover {
+    -fx-background-color: rgba(78, 204, 163, 0.2);
+}
+
+/* ========================================
+   TABLE VIEW
+   ======================================== */
+.table-view {
+    -fx-background-color: #353b48;
+    -fx-border-color: #636e72;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+}
+
+.table-view .column-header {
+    -fx-background-color: #2d3436;
+    -fx-text-fill: #f5f7fa;
+    -fx-font-weight: bold;
+}
+
+.table-view .table-cell {
+    -fx-text-fill: #f5f7fa;
+    -fx-border-color: #636e72;
+}
+
+.table-view .table-row-cell:selected {
+    -fx-background-color: #4ecca3;
+    -fx-text-fill: white;
+}
+
+.table-view .table-row-cell:hover {
+    -fx-background-color: rgba(78, 204, 163, 0.2);
+}
+
+/* ========================================
+   DIALOGS
+   ======================================== */
+.dialog-pane {
+    -fx-background-color: #353b48;
+}
+
+.dialog-pane .header-panel {
+    -fx-background-color: #2d3436;
+}
+
+.dialog-pane .content {
+    -fx-background-color: #353b48;
+    -fx-padding: 20;
+}
+
+.dialog-pane .button-bar {
+    -fx-background-color: #2d3436;
+}
+
+.dialog-pane .label {
+    -fx-text-fill: #f5f7fa;
+}
+
+/* ========================================
+   SPECIAL GAME ELEMENTS
+   ======================================== */
 .difficulty-button {
-    -fx-background-color: #A1C2BD;
-    -fx-text-fill: #19183B;
+    -fx-background-color: #636e72;
+    -fx-text-fill: #f5f7fa;
+    -fx-font-size: 14px;
+    -fx-padding: 10 20;
+    -fx-background-radius: 15;
+    -fx-cursor: hand;
 }
+
+.difficulty-button:hover {
+    -fx-background-color: #4ecca3;
+    -fx-text-fill: white;
+}
+
 .difficulty-button-selected {
-    -fx-background-color: #E7F2EF;
-    -fx-text-fill: #19183B;
+    -fx-background-color: #4ecca3;
+    -fx-text-fill: white;
+    -fx-border-color: #45b393;
+    -fx-border-width: 2;
 }
-.letter-display, .score-display, .player-score {
-    -fx-text-fill: #E7F2EF;
+
+.add-player-button {
+    -fx-background-color: #4ecca3;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-padding: 10 20;
+    -fx-background-radius: 20;
+    -fx-cursor: hand;
+}
+
+.add-player-button:hover {
+    -fx-background-color: #45b393;
+}
+
+.remove-player-button {
+    -fx-background-color: #ff4757;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-padding: 8 15;
+    -fx-background-radius: 15;
+    -fx-cursor: hand;
+}
+
+.remove-player-button:hover {
+    -fx-background-color: #e63946;
+}
+
+/* ========================================
+   VALIDATION STYLES
+   ======================================== */
+.validation-correct {
+    -fx-border-color: #00b894;
+    -fx-border-width: 2;
+}
+
+.validation-incorrect {
+    -fx-border-color: #ff4757;
+    -fx-border-width: 2;
+}
+
+.validation-pending {
+    -fx-border-color: #ffa502;
+    -fx-border-width: 2;
+}
+
+/* ========================================
+   SETTINGS DIALOG SPECIFIC STYLES
+   ======================================== */
+.settings-scroll {
+    -fx-background-color: #2d3436;
+    -fx-border-color: transparent;
+}
+
+.settings-scroll .viewport {
+    -fx-background-color: #2d3436;
+}
+
+.settings-content {
+    -fx-background-color: #2d3436;
+}
+
+/* ========================================
+   CATEGORY CONFIG SPECIFIC STYLES
+   ======================================== */
+.header-section {
+    -fx-background-color: #353b48;
+    -fx-padding: 20;
+}
+
+.page-title {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f5f7fa;
+}
+
+.form-section {
+    -fx-background-color: #353b48;
+    -fx-background-radius: 12;
+    -fx-border-color: #636e72;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+}
+
+.table-section {
+    -fx-background-color: #353b48;
+    -fx-background-radius: 12;
+    -fx-border-color: #636e72;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+}
+
+.button-primary {
+    -fx-background-color: #4ecca3;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 10 25;
+    -fx-background-radius: 20;
+    -fx-cursor: hand;
+}
+
+.button-primary:hover {
+    -fx-background-color: #45b393;
+}
+
+.button-secondary {
+    -fx-background-color: #636e72;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-padding: 10 25;
+    -fx-background-radius: 20;
+    -fx-cursor: hand;
+}
+
+.button-secondary:hover {
+    -fx-background-color: #4ecca3;
+}
+
+.config-combo {
+    -fx-background-color: #353b48;
+    -fx-text-fill: #f5f7fa;
+    -fx-border-color: #636e72;
+    -fx-border-width: 2;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+}
+
+.config-combo:focused {
+    -fx-border-color: #4ecca3;
+}
+
+.config-combo .list-cell {
+    -fx-background-color: #353b48;
+    -fx-text-fill: #f5f7fa;
+}
+
+/* Table row cells */
+.table-row-cell {
+    -fx-background-color: #2d3436;
+    -fx-text-fill: #f5f7fa;
+}
+
+.table-row-cell:odd {
+    -fx-background-color: #353b48;
+}
+
+.table-row-cell:selected {
+    -fx-background-color: #4ecca3;
+    -fx-text-fill: white;
+}
+
+.table-row-cell:hover {
+    -fx-background-color: rgba(78, 204, 163, 0.3);
+}
+
+.table-cell {
+    -fx-text-fill: #f5f7fa;
+    -fx-alignment: CENTER_LEFT;
 }

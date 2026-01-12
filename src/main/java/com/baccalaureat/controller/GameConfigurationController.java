@@ -1,28 +1,32 @@
 package com.baccalaureat.controller;
 
-import com.baccalaureat.model.Category;
-import com.baccalaureat.model.GameConfig;
-import com.baccalaureat.model.GameSession;
-import com.baccalaureat.service.CategoryService;
-import javafx.application.Platform;
-import javafx.beans.value.ChangeListener;
-import javafx.event.ActionEvent;
-import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
-import javafx.geometry.Insets;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
-import javafx.scene.control.*;
-import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.VBox;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import com.baccalaureat.model.Category;
+import com.baccalaureat.model.GameConfig;
+import com.baccalaureat.service.CategoryService;
+import com.baccalaureat.util.DialogHelper;
+import com.baccalaureat.util.ThemeManager;
+
+import javafx.application.Platform;
+import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.geometry.Insets;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.Slider;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.VBox;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 
 /**
  * Controller for the Game Configuration Screen.
@@ -350,16 +354,10 @@ public class GameConfigurationController {
             Stage categoryStage = new Stage();
             categoryStage.setTitle("Gestionnaire de Catégories");
             categoryStage.initModality(Modality.APPLICATION_MODAL);
-            categoryStage.setScene(new Scene(root, 700, 500));
+            Scene scene = new Scene(root, 700, 500);
             
-            if (darkMode) {
-                categoryStage.getScene().getStylesheets().add(
-                    getClass().getResource("/com/baccalaureat/theme-dark.css").toExternalForm());
-            } else {
-                categoryStage.getScene().getStylesheets().add(
-                    getClass().getResource("/com/baccalaureat/theme-light.css").toExternalForm());
-            }
-            
+            ThemeManager.applySavedTheme(scene);
+            categoryStage.setScene(scene);
             categoryStage.showAndWait();
             
             // Refresh category display after closing dialog
@@ -404,21 +402,8 @@ public class GameConfigurationController {
             // Default behavior - return to main menu
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/MainMenu.fxml"));
             Parent root = loader.load();
-            Scene scene = new Scene(root, 900, 700);
             
-            if (darkMode) {
-                scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-dark.css").toExternalForm());
-            } else {
-                scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-light.css").toExternalForm());
-            }
-            
-            // Set darkMode in MainMenuController
-            Object controller = loader.getController();
-            if (controller instanceof MainMenuController mmc) {
-                mmc.setDarkMode(darkMode);
-            }
-            
-            stage.setScene(scene);
+            ThemeManager.switchToFullScreenScene(stage, root);
             stage.show();
         } catch (IOException e) {
             e.printStackTrace();
@@ -486,13 +471,6 @@ public class GameConfigurationController {
     private void startSoloGame(Stage stage) throws IOException {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/GameView.fxml"));
         Parent root = loader.load();
-        Scene scene = new Scene(root, 1000, 750);
-        
-        if (darkMode) {
-            scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-dark.css").toExternalForm());
-        } else {
-            scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-light.css").toExternalForm());
-        }
         
         // Configure GameController with our settings
         Object controller = loader.getController();
@@ -507,7 +485,7 @@ public class GameConfigurationController {
             }
             
             // Show the scene first, then start the game
-            stage.setScene(scene);
+            ThemeManager.switchToFullScreenScene(stage, root);
             stage.show();
             
             // Start the game after the scene is shown
@@ -515,7 +493,7 @@ public class GameConfigurationController {
                 gc.startGameAfterSceneShown();
             });
         } else {
-            stage.setScene(scene);
+            ThemeManager.switchToFullScreenScene(stage, root);
             stage.show();
         }
     }
@@ -523,13 +501,6 @@ public class GameConfigurationController {
     private void startLocalGame(Stage stage) throws IOException {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/MultiplayerGame.fxml"));
         Parent root = loader.load();
-        Scene scene = new Scene(root, 1000, 750);
-        
-        if (darkMode) {
-            scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-dark.css").toExternalForm());
-        } else {
-            scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-light.css").toExternalForm());
-        }
         
         // Configure MultiplayerGameController with our settings
         Object controller = loader.getController();
@@ -543,7 +514,7 @@ public class GameConfigurationController {
             }
             
             // Show the scene first, then start the game
-            stage.setScene(scene);
+            ThemeManager.switchToFullScreenScene(stage, root);
             stage.show();
             
             // Start the game after the scene is shown
@@ -551,17 +522,13 @@ public class GameConfigurationController {
                 mgc.startGameAfterSceneShown();
             });
         } else {
-            stage.setScene(scene);
+            ThemeManager.switchToFullScreenScene(stage, root);
             stage.show();
         }
     }
     
     private void showError(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        DialogHelper.showError(title, null, message);
     }
     
     /**

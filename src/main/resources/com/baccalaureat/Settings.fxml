@@ -3,33 +3,85 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.geometry.Insets?>
+<?import java.lang.String?>
 
-<VBox xmlns="http://javafx.com/javafx/21.0.2" xmlns:fx="http://javafx.com/fxml/1"
+<ScrollPane xmlns="http://javafx.com/javafx/21.0.2" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.baccalaureat.controller.SettingsController"
-      spacing="20" alignment="CENTER" styleClass="main-menu" stylesheets="@styles.css">
+      fitToWidth="true" styleClass="settings-scroll">
     
-    <padding>
-        <Insets top="30" right="40" bottom="30" left="40"/>
-    </padding>
-    
-    <!-- Header -->
-    <Label text="Settings" styleClass="game-title"/>
-    
-    <!-- Language Selection -->
-    <VBox spacing="10" alignment="CENTER" styleClass="config-section">
-        <Label text="Language" styleClass="section-title"/>
-        <ComboBox fx:id="languageComboBox" prefWidth="200" styleClass="config-combo">
-            <items>
-                <String fx:value="English"/>
-                <String fx:value="Français"/>
-            </items>
-        </ComboBox>
+    <VBox spacing="20" alignment="TOP_CENTER" styleClass="settings-content">
+        <padding>
+            <Insets top="30" right="40" bottom="30" left="40"/>
+        </padding>
+        
+        <!-- Header -->
+        <Label text="⚙️ Settings" styleClass="game-title"/>
+        
+        <!-- Theme Selection -->
+        <VBox spacing="10" alignment="CENTER" styleClass="card" VBox.vgrow="NEVER">
+            <padding>
+                <Insets top="15" right="15" bottom="15" left="15"/>
+            </padding>
+            <Label text="🎨 Theme" styleClass="section-title"/>
+            <ComboBox fx:id="themeComboBox" prefWidth="250" styleClass="config-combo"/>
+            <Label text="Choose your preferred color theme" styleClass="info-text"/>
+        </VBox>
+        
+        <!-- Display Settings -->
+        <VBox spacing="10" alignment="CENTER" styleClass="card" VBox.vgrow="NEVER">
+            <padding>
+                <Insets top="15" right="15" bottom="15" left="15"/>
+            </padding>
+            <Label text="🖥️ Display Settings" styleClass="section-title"/>
+            
+            <!-- Font Size -->
+            <HBox spacing="10" alignment="CENTER">
+                <Label text="Font Size:" prefWidth="100" styleClass="label"/>
+                <ComboBox fx:id="fontSizeComboBox" prefWidth="150" styleClass="config-combo"/>
+            </HBox>
+            
+            <Label text="Adjust text size for better readability" styleClass="info-text"/>
+        </VBox>
+        
+        <!-- Audio Settings -->
+        <VBox spacing="10" alignment="CENTER" styleClass="card" VBox.vgrow="NEVER">
+            <padding>
+                <Insets top="15" right="15" bottom="15" left="15"/>
+            </padding>
+            <Label text="🔊 Audio Settings" styleClass="section-title"/>
+            
+            <!-- Sound Effects Toggle -->
+            <HBox spacing="15" alignment="CENTER">
+                <Label text="Sound Effects:" prefWidth="120" styleClass="label"/>
+                <CheckBox fx:id="soundEffectsCheckBox" styleClass="check-box"/>
+            </HBox>
+            
+            <!-- Music Toggle -->
+            <HBox spacing="15" alignment="CENTER">
+                <Label text="Background Music:" prefWidth="120" styleClass="label"/>
+                <CheckBox fx:id="backgroundMusicCheckBox" styleClass="check-box"/>
+            </HBox>
+            
+            <Label text="Enable or disable game audio" styleClass="info-text"/>
+        </VBox>
+        
+        <!-- Language Selection -->
+        <VBox spacing="10" alignment="CENTER" styleClass="card" VBox.vgrow="NEVER">
+            <padding>
+                <Insets top="15" right="15" bottom="15" left="15"/>
+            </padding>
+            <Label text="🌐 Language" styleClass="section-title"/>
+            <ComboBox fx:id="languageComboBox" prefWidth="250" styleClass="config-combo"/>
+            <Label text="Select your preferred language" styleClass="info-text"/>
+        </VBox>
+        
+        <!-- Actions -->
+        <HBox spacing="15" alignment="CENTER">
+            <Button fx:id="saveButton" text="💾 Save" styleClass="action-button" 
+                    onAction="#handleSave" prefWidth="120"/>
+            <Button fx:id="closeButton" text="✖ Close" styleClass="secondary-button" 
+                    onAction="#handleClose" prefWidth="120"/>
+        </HBox>
     </VBox>
     
-    <!-- Actions -->
-    <HBox spacing="15" alignment="CENTER">
-        <Button fx:id="closeButton" text="Close" styleClass="secondary-button" 
-                onAction="#handleClose" prefWidth="100"/>
-    </HBox>
-    
-</VBox>
+</ScrollPane>
