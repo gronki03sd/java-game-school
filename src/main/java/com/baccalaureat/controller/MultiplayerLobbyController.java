@@ -5,6 +5,10 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 import com.baccalaureat.util.DialogHelper;
 import com.baccalaureat.util.ThemeManager;
@@ -290,15 +294,11 @@ public class MultiplayerLobbyController {
         }
         
         try {
-            // Create JSON request body for starting game
-            ObjectNode requestBody = objectMapper.createObjectNode();
-            requestBody.put("sessionId", sessionId);
-            
-            // Build HTTP request
+            // Build HTTP request - sessionId is part of the URL path
             HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(SERVER_URL + "/start"))
+                .uri(URI.create(SERVER_URL + "/" + sessionId + "/start"))
                 .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
+                .POST(HttpRequest.BodyPublishers.ofString("{}"))  // Empty JSON body
                 .build();
             
             System.out.println("[REST] Sending START_GAME request");
@@ -320,12 +320,19 @@ public class MultiplayerLobbyController {
         Platform.runLater(() -> {
             try {
                 JsonNode response = objectMapper.readTree(responseBody);
-                System.out.println("[LOBBY] Game started via REST API");
+                System.out.println("[API] Start game response: " + responseBody);
+                
+                // Extract game state information
+                String status = response.has("status") ? response.get("status").asText() : "UNKNOWN";
+                String letter = response.has("letter") ? response.get("letter").asText() : null;
+                
+                System.out.println("[LOBBY] Game started via REST API - Status: " + status + ", Letter: " + letter);
                 
                 // Navigate to game screen
                 navigateToGameScreen();
                 
             } catch (Exception e) {
+                System.out.println("[API] Error parsing start game response: " + e.getMessage());
                 showError("Erreur lors du traitement de la réponse: " + e.getMessage());
             }
         });
@@ -334,8 +341,15 @@ public class MultiplayerLobbyController {
     private void navigateToGameScreen() {
         try {
             Stage stage = (Stage) createGameButton.getScene().getWindow();
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/Game.fxml"));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/MultiplayerGame.fxml"));
             Parent root = loader.load();
+            
+            // Pass game state data to the multiplayer game controller
+            MultiplayerGameController gameController = loader.getController();
+            if (gameController != null) {
+                gameController.setDarkMode(darkMode);
+            }
+            
             Scene scene = new Scene(root, 1000, 750);
             
             // Apply current theme
