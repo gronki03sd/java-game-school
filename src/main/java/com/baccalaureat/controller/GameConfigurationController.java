@@ -58,6 +58,11 @@ public class GameConfigurationController {
     private boolean darkMode = false;
     private final Map<String, TextField> nicknameFields = new HashMap<>();
     
+    // Multiplayer-specific fields
+    private String multiplayerSessionId;
+    private String multiplayerPlayerName;
+    private MultiplayerLobbyController lobbyController;
+    
     @FXML
     private void initialize() {
         setupRoundsSlider();
@@ -76,6 +81,47 @@ public class GameConfigurationController {
     
     public void setDarkMode(boolean darkMode) {
         this.darkMode = darkMode;
+    }
+    
+    /**
+     * Configure controller for multiplayer mode.
+     */
+    public void setMultiplayerMode(String sessionId, String playerName, MultiplayerLobbyController lobbyController) {
+        this.multiplayerSessionId = sessionId;
+        this.multiplayerPlayerName = playerName;
+        this.lobbyController = lobbyController;
+        
+        // Set DISTANT mode and hide player configuration section for multiplayer
+        gameConfig.setMode(GameConfig.GameMode.DISTANT);
+        modeLabel.setText("Mode Multijoueur - Session: " + sessionId);
+        playerConfigSection.setVisible(false);
+        playerConfigSection.setManaged(false);
+        
+        // Set default player name for host - remove local multiplayer restrictions
+        List<String> hostPlayer = List.of(playerName);
+        gameConfig.setPlayerNicknames(hostPlayer);
+        
+        // Update start button text for multiplayer
+        startGameButton.setText("Confirmer et Démarrer");
+        
+        // Force update category display to ensure categories are loaded
+        System.out.println("[CONFIG] Multiplayer mode set - forcing category update");
+        updateCategoryDisplay();
+        
+        System.out.println("[CONFIG] Multiplayer mode set - Session: " + sessionId + ", Player: " + playerName);
+    }
+    
+    /**
+     * Called when GAME_STARTED event is received to close the configuration window
+     */
+    public void closeConfigurationWindow() {
+        Platform.runLater(() -> {
+            Stage stage = (Stage) startGameButton.getScene().getWindow();
+            if (stage != null) {
+                stage.close();
+                System.out.println("[CONFIG] Configuration window closed after GAME_STARTED");
+            }
+        });
     }
     
     private void setupRoundsSlider() {
@@ -212,7 +258,38 @@ public class GameConfigurationController {
     }
     
     private void updateCategoryDisplay() {
+        System.out.println("[CONFIG] updateCategoryDisplay() called");
         List<Category> categories = categoryService.getEnabledCategories();
+        System.out.println("[CONFIG] Enabled categories from service: " + categories.size());
+        
+        // Ensure at least some basic categories are enabled for testing
+        if (categories.isEmpty()) {
+            System.out.println("[CONFIG] No categories enabled - enabling default categories");
+            List<Category> allCategories = categoryService.getAllCategories();
+            System.out.println("[CONFIG] All available categories: " + allCategories.size());
+            
+            if (!allCategories.isEmpty()) {
+                // Enable the first 3 categories by default for easier testing
+                for (int i = 0; i < Math.min(3, allCategories.size()); i++) {
+                    Category cat = allCategories.get(i);
+                    try {
+                        System.out.println("[CONFIG] Attempting to enable category: " + cat.getName() + " (ID: " + cat.getId() + ")");
+                        categoryService.enableCategory(cat.getId());
+                        System.out.println("[CONFIG] Auto-enabled category: " + cat.getName());
+                    } catch (Exception e) {
+                        System.err.println("[CONFIG] Failed to enable category " + cat.getName() + ": " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                }
+                // Refresh the categories list
+                categories = categoryService.getEnabledCategories();
+                System.out.println("[CONFIG] Categories after auto-enable: " + categories.size());
+            } else {
+                System.err.println("[CONFIG] ERROR: No categories available at all!");
+            }
+        }
+        
+        System.out.println("[CONFIG] Final categories to set: " + categories.size());
         gameConfig.setSelectedCategories(categories);
         
         categoryCountLabel.setText(categories.size() + " catégories sélectionnées");
@@ -224,15 +301,39 @@ public class GameConfigurationController {
             categoryChipsContainer.getChildren().add(chip);
         }
         
+        System.out.println("[CONFIG] Calling validateConfiguration after category update");
         validateConfiguration();
     }
     
     private void validateConfiguration() {
-        boolean isValid = gameConfig.isValid();
+        System.out.println("[CONFIG] validateConfiguration called");
+        System.out.println("[CONFIG] Lobby controller present: " + (lobbyController != null));
+        
+        boolean isValid;
+        
+        // Special validation for multiplayer mode - less restrictive
+        if (lobbyController != null) {
+            // For multiplayer, only require categories to be selected
+            isValid = gameConfig.getSelectedCategories() != null && 
+                     !gameConfig.getSelectedCategories().isEmpty();
+            System.out.println("[CONFIG] Multiplayer mode - Categories count: " + 
+                (gameConfig.getSelectedCategories() != null ? gameConfig.getSelectedCategories().size() : "null"));
+        } else {
+            // Standard validation for local/solo modes
+            isValid = gameConfig.isValid();
+            System.out.println("[CONFIG] Standard mode - Valid: " + isValid);
+        }
+        
+        System.out.println("[CONFIG] Configuration valid: " + isValid + ", Button will be " + (isValid ? "enabled" : "disabled"));
         startGameButton.setDisable(!isValid);
         
         if (!isValid) {
-            String message = gameConfig.getValidationMessage();
+            String message;
+            if (lobbyController != null) {
+                message = "Sélectionnez au moins une catégorie pour démarrer";
+            } else {
+                message = gameConfig.getValidationMessage();
+            }
             validationMessageLabel.setText(message);
             validationMessageLabel.setVisible(true);
         } else {
@@ -274,6 +375,33 @@ public class GameConfigurationController {
     private void handleBack() {
         try {
             Stage stage = (Stage) backButton.getScene().getWindow();
+            
+            // Check if we're in multiplayer mode - return to lobby instead of main menu
+            if (lobbyController != null) {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/MultiplayerLobby.fxml"));
+                Parent root = loader.load();
+                Scene scene = new Scene(root, 1000, 750);
+                
+                if (darkMode) {
+                    scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-dark.css").toExternalForm());
+                } else {
+                    scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-light.css").toExternalForm());
+                }
+                
+                // Restore lobby controller state
+                MultiplayerLobbyController restoredController = loader.getController();
+                if (restoredController != null) {
+                    restoredController.setDarkMode(darkMode);
+                    // Copy session state from original lobby controller
+                    restoredController.restoreSessionState(multiplayerSessionId, multiplayerPlayerName, true);
+                }
+                
+                stage.setScene(scene);
+                stage.show();
+                return;
+            }
+            
+            // Default behavior - return to main menu
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/MainMenu.fxml"));
             Parent root = loader.load();
             Scene scene = new Scene(root, 900, 700);
@@ -299,7 +427,38 @@ public class GameConfigurationController {
     
     @FXML
     private void handleStartGame() {
-        if (!gameConfig.isValid()) {
+        System.out.println("[CONFIG] handleStartGame called - Button clicked!");
+        System.out.println("[CONFIG] Game mode: " + gameConfig.getMode());
+        System.out.println("[CONFIG] Lobby controller present: " + (lobbyController != null));
+        
+        // Use same validation logic as validateConfiguration()
+        boolean isValid;
+        if (lobbyController != null) {
+            // For multiplayer, only require categories to be selected
+            List<Category> selectedCategories = gameConfig.getSelectedCategories();
+            System.out.println("[CONFIG] Multiplayer validation - Selected categories: " + 
+                (selectedCategories != null ? selectedCategories.size() + " categories" : "NULL"));
+            if (selectedCategories != null) {
+                for (Category cat : selectedCategories) {
+                    System.out.println("[CONFIG]   - Category: " + cat.getName() + " (ID: " + cat.getId() + ")");
+                }
+            }
+            
+            isValid = selectedCategories != null && !selectedCategories.isEmpty();
+            System.out.println("[CONFIG] Multiplayer validation result: " + isValid);
+        } else {
+            // Standard validation for local/solo modes
+            isValid = gameConfig.isValid();
+            System.out.println("[CONFIG] Standard validation result: " + isValid);
+            if (!isValid) {
+                System.out.println("[CONFIG] Validation message: " + gameConfig.getValidationMessage());
+            }
+        }
+        
+        System.out.println("[CONFIG] Final validation result: " + isValid);
+        
+        if (!isValid) {
+            System.out.println("[CONFIG] Game config is not valid, returning early");
             return;
         }
         
@@ -309,7 +468,14 @@ public class GameConfigurationController {
             switch (gameConfig.getMode()) {
                 case SOLO -> startSoloGame(stage);
                 case LOCAL -> startLocalGame(stage);
-                case DISTANT -> showError("Non Implémenté", "Le mode distant n'est pas encore disponible");
+                case DISTANT -> {
+                    if (lobbyController != null) {
+                        // Multiplayer mode - send configuration via WebSocket START_GAME
+                        startMultiplayerGame();
+                    } else {
+                        showError("Erreur", "Contrôleur de lobby non disponible");
+                    }
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -396,5 +562,117 @@ public class GameConfigurationController {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+    
+    /**
+     * Start multiplayer game by sending configuration via WebSocket
+     */
+    private void startMultiplayerGame() {
+        if (lobbyController == null || multiplayerSessionId == null) {
+            showError("Erreur", "Session multijoueur non disponible");
+            return;
+        }
+        
+        // Get multiplayer service from lobby controller
+        var multiplayerService = lobbyController.getMultiplayerService();
+        if (multiplayerService == null) {
+            showError("Erreur", "Service multijoueur non disponible");
+            return;
+        }
+        
+        // Check WebSocket connection
+        System.out.println("[CONFIG] Checking WebSocket connection status...");
+        boolean isConnected = multiplayerService.isConnected();
+        System.out.println("[CONFIG] WebSocket connected: " + isConnected);
+        
+        if (!isConnected) {
+            System.err.println("[CONFIG] WebSocket not connected - attempting to reconnect...");
+            showError("Erreur", "WebSocket non connecté. Veuillez vérifier la connexion au serveur.");
+            return;
+        }
+        
+        // Collect configuration
+        int numberOfRounds = (int) roundsSlider.getValue();
+        int roundDuration = parseDuration(durationComboBox.getValue());
+        List<String> categoryNames = gameConfig.getSelectedCategories().stream()
+            .map(Category::getName)
+            .collect(java.util.stream.Collectors.toList());
+        
+        System.out.println("[CONFIG] === SENDING START_GAME PAYLOAD ===");
+        System.out.println("[CONFIG] Session ID: " + multiplayerSessionId);
+        System.out.println("[CONFIG] Player name: " + multiplayerPlayerName);
+        System.out.println("[CONFIG] Number of rounds: " + numberOfRounds);
+        System.out.println("[CONFIG] Round duration: " + roundDuration + "s");
+        System.out.println("[CONFIG] Categories (" + categoryNames.size() + "):");
+        for (String catName : categoryNames) {
+            System.out.println("[CONFIG]   - " + catName);
+        }
+        System.out.println("[CONFIG] WebSocket connected: " + multiplayerService.isConnected());
+        System.out.println("[CONFIG] =====================================");
+        
+        try {
+            // Send START_GAME message via WebSocket
+            System.out.println("[CONFIG] About to call multiplayerService.startGame()...");
+            multiplayerService.startGame(numberOfRounds, roundDuration, categoryNames);
+            
+            // Show confirmation to user
+            startGameButton.setText("Envoi en cours...");
+            startGameButton.setDisable(true);
+            
+            System.out.println("[CONFIG] START_GAME message sent successfully");
+            System.out.println("[CONFIG] Waiting for GAME_STARTED response from server...");
+            
+            // Add a timeout mechanism to reset the button if no response
+            Platform.runLater(() -> {
+                new Thread(() -> {
+                    try {
+                        Thread.sleep(15000); // Wait 15 seconds
+                        Platform.runLater(() -> {
+                            if (startGameButton.getText().equals("Envoi en cours...")) {
+                                System.err.println("[CONFIG] Timeout waiting for GAME_STARTED - resetting button");
+                                startGameButton.setText("Confirmer et Démarrer");
+                                startGameButton.setDisable(false);
+                                showError("Timeout", "Le serveur ne répond pas. Veuillez réessayer.");
+                            }
+                        });
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }).start();
+            });
+            
+            // Don't close window immediately - wait for GAME_STARTED event
+            // The MultiplayerLobbyController will handle the transition when GAME_STARTED is received
+            
+        } catch (Exception e) {
+            System.err.println("[CONFIG] Error sending START_GAME: " + e.getMessage());
+            e.printStackTrace();
+            showError("Erreur", "Erreur lors de l'envoi de la configuration: " + e.getMessage());
+            
+            // Reset button state
+            startGameButton.setText("Confirmer et Démarrer");
+            startGameButton.setDisable(false);
+        }
+    }
+    
+    /**
+     * Parse duration string to seconds
+     */
+    private int parseDuration(String durationString) {
+        if (durationString == null) return 60;
+        
+        try {
+            if (durationString.contains("min")) {
+                String[] parts = durationString.split(" ");
+                int minutes = Integer.parseInt(parts[0]);
+                return minutes * 60;
+            } else if (durationString.contains("s")) {
+                return Integer.parseInt(durationString.replace("s", ""));
+            } else {
+                return Integer.parseInt(durationString);
+            }
+        } catch (NumberFormatException e) {
+            return 60; // Default to 60 seconds
+        }
     }
 }

@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.application.Platform;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -63,7 +64,8 @@ public class MultiplayerService implements MultiplayerMessageListener {
         this.isHost = true;
         
         logger.log(System.Logger.Level.INFO, "Creating game session: player=" + playerName);
-        client.sendJoinGame("CREATE", playerName);
+        // Note: Game creation is handled by REST API, not WebSocket
+        // WebSocket connection will be established after REST API creates the session
     }
     
     /**
@@ -75,21 +77,45 @@ public class MultiplayerService implements MultiplayerMessageListener {
         this.isHost = false;
         
         logger.log(System.Logger.Level.INFO, "Joining game session: " + sessionId + " as " + playerName);
-        client.sendJoinGame(sessionId, playerName);
+        // Note: Game joining is handled by REST API, not WebSocket
+        // WebSocket connection will be established after REST API join
     }
     
     /**
-     * Start the game (host only)
+     * Start the game (host only) with configuration
      */
-    public void startGame() {
+    public void startGame(int numberOfRounds, int roundDuration, List<String> categories) {
         if (!isHost) {
             logger.log(System.Logger.Level.WARNING, "Only host can start the game");
+            System.err.println("[MULTIPLAYER] Not host - cannot start game");
             return;
         }
         
-        logger.log(System.Logger.Level.INFO, "Starting game session: " + currentSessionId);
-        // Send start game message to server
-        // Format will depend on server implementation
+        System.out.println("[MULTIPLAYER] Starting game session: " + currentSessionId);
+        System.out.println("[MULTIPLAYER] Config - Rounds: " + numberOfRounds + ", Duration: " + roundDuration + "s, Categories: " + categories.size());
+        
+        // Create configuration map
+        Map<String, Object> config = new HashMap<>();
+        config.put("numberOfRounds", numberOfRounds);
+        config.put("roundDuration", roundDuration);
+        config.put("categories", categories);
+        
+        System.out.println("[MULTIPLAYER] Sending START_GAME message via WebSocket...");
+        boolean sent = client.sendStartGame(config);
+        System.out.println("[MULTIPLAYER] START_GAME message sent: " + sent);
+    }
+    
+    /**
+     * Join a WebSocket session after REST API join
+     */
+    public void joinWebSocketSession(String sessionId, String playerName) {
+        this.currentSessionId = sessionId;
+        this.currentPlayerName = playerName;
+        // Don't change isHost flag here - it should be set by createGame() or joinGame()
+        
+        System.out.println("[MULTIPLAYER] Joining WebSocket session: " + sessionId + " as " + playerName + " (isHost: " + isHost + ")");
+        logger.log(System.Logger.Level.INFO, "Joining WebSocket session: " + sessionId + " as " + playerName);
+        client.sendJoinSession(sessionId, playerName);
     }
     
     /**
@@ -106,6 +132,14 @@ public class MultiplayerService implements MultiplayerMessageListener {
     public void readyForNextRound() {
         logger.log(System.Logger.Level.INFO, "Player ready for next round");
         client.sendReadyForNextRound();
+    }
+    
+    /**
+     * End the game and show leaderboard
+     */
+    public void endGame() {
+        logger.log(System.Logger.Level.INFO, "Ending game");
+        client.sendEndGame();
     }
     
     /**
@@ -139,6 +173,11 @@ public class MultiplayerService implements MultiplayerMessageListener {
         return isHost;
     }
     
+    public void setHost(boolean isHost) {
+        System.out.println("[MULTIPLAYER] Host status updated: " + this.isHost + " -> " + isHost);
+        this.isHost = isHost;
+    }
+    
     // MultiplayerMessageListener implementation
     
     @Override
@@ -163,19 +202,23 @@ public class MultiplayerService implements MultiplayerMessageListener {
     
     @Override
     public void onMessageReceived(String json) {
+        System.out.println("[MULTIPLAYER] WebSocket message received: " + json);
+        
         try {
             JsonNode node = objectMapper.readTree(json);
             String messageType = node.has("type") ? node.get("type").asText() : "UNKNOWN";
             
+            System.out.println("[MULTIPLAYER] Processing message type: " + messageType);
             logger.log(System.Logger.Level.INFO, "Processing message type: " + messageType);
             
             switch (messageType) {
-                case "gameCreated" -> handleGameCreated(node);
-                case "playerJoined" -> handlePlayerJoined(node);
-                case "gameStarted" -> handleGameStarted(node);
-                case "roundEnded" -> handleRoundEnded(node);
-                case "resultsReceived" -> handleResultsReceived(node);
-                case "error" -> handleError(node);
+                case "SESSION_JOINED" -> handleSessionJoined(node);
+                case "PLAYER_JOINED" -> handlePlayerJoined(node);
+                case "GAME_STARTED" -> handleGameStarted(node);
+                case "ROUND_ENDED" -> handleRoundEnded(node);
+                case "ROUND_STARTED" -> handleRoundStarted(node);
+                case "GAME_ENDED" -> handleGameEnded(node);
+                case "ERROR" -> handleError(node);
                 default -> logger.log(System.Logger.Level.WARNING, "Unknown message type: " + messageType);
             }
             
@@ -187,59 +230,78 @@ public class MultiplayerService implements MultiplayerMessageListener {
     
     // Message handlers
     
-    private void handleGameCreated(JsonNode node) {
+    private void handleSessionJoined(JsonNode node) {
         String sessionId = node.has("sessionId") ? node.get("sessionId").asText() : null;
-        boolean success = node.has("success") ? node.get("success").asBoolean() : false;
+        String playerName = node.has("playerName") ? node.get("playerName").asText() : null;
         
-        if (success && sessionId != null) {
-            currentSessionId = sessionId;
-            isHost = true;
-            logger.log(System.Logger.Level.INFO, "Game created successfully: " + sessionId);
-            notifyListeners(listener -> listener.onGameCreated(sessionId));
-        } else {
-            String error = node.has("error") ? node.get("error").asText() : "Failed to create game";
-            logger.log(System.Logger.Level.ERROR, "Game creation failed: " + error);
-            notifyListeners(listener -> listener.onError(error));
-        }
+        logger.log(System.Logger.Level.INFO, "Successfully joined session: " + sessionId + " as " + playerName);
+        this.currentSessionId = sessionId;
+        this.currentPlayerName = playerName;
     }
     
     private void handlePlayerJoined(JsonNode node) {
         String playerName = node.has("playerName") ? node.get("playerName").asText() : "Unknown";
-        String sessionId = node.has("sessionId") ? node.get("sessionId").asText() : currentSessionId;
         
-        logger.log(System.Logger.Level.INFO, "Player joined: " + playerName + " in session " + sessionId);
+        logger.log(System.Logger.Level.INFO, "Player joined: " + playerName);
         notifyListeners(listener -> listener.onPlayerJoined(playerName));
     }
     
     private void handleGameStarted(JsonNode node) {
+        System.out.println("[MULTIPLAYER] handleGameStarted called");
+        System.out.println("[MULTIPLAYER] GAME_STARTED message: " + node.toString());
+        
         try {
             String letter = node.has("letter") ? node.get("letter").asText() : null;
-            int duration = node.has("duration") ? node.get("duration").asInt() : 60;
+            int duration = node.has("roundDuration") ? node.get("roundDuration").asInt() : 60;
             
             List<String> categories = new ArrayList<>();
             if (node.has("categories") && node.get("categories").isArray()) {
                 node.get("categories").forEach(cat -> categories.add(cat.asText()));
             }
             
+            System.out.println("[MULTIPLAYER] Parsed GAME_STARTED - Letter: " + letter + 
+                             ", Duration: " + duration + "s, Categories: " + categories.size());
+            
             logger.log(System.Logger.Level.INFO, 
                 "Game started: letter=" + letter + ", duration=" + duration + ", categories=" + categories.size());
             
+            System.out.println("[MULTIPLAYER] Notifying " + this.eventListeners.size() + " listeners of GAME_STARTED");
             notifyListeners(listener -> listener.onGameStarted(letter, categories, duration));
             
         } catch (Exception e) {
+            System.err.println("[MULTIPLAYER] Failed to parse game start data: " + e.getMessage());
             logger.log(System.Logger.Level.ERROR, "Failed to parse game start data", e);
         }
     }
     
     private void handleRoundEnded(JsonNode node) {
         logger.log(System.Logger.Level.INFO, "Round ended");
+        
+        // Extract round results if available
+        JsonNode results = node.has("results") ? node.get("results") : null;
         notifyListeners(listener -> listener.onRoundEnded());
+        
+        if (results != null) {
+            notifyListeners(listener -> listener.onResultsReceived(results));
+        }
     }
     
-    private void handleResultsReceived(JsonNode node) {
-        logger.log(System.Logger.Level.INFO, "Results received");
-        // Parse results and notify
-        notifyListeners(listener -> listener.onResultsReceived(node));
+    private void handleRoundStarted(JsonNode node) {
+        String letter = node.has("letter") ? node.get("letter").asText() : null;
+        int currentRound = node.has("currentRound") ? node.get("currentRound").asInt() : 1;
+        int totalRounds = node.has("totalRounds") ? node.get("totalRounds").asInt() : 1;
+        
+        logger.log(System.Logger.Level.INFO, 
+            "Round started: letter=" + letter + ", round=" + currentRound + "/" + totalRounds);
+        
+        notifyListeners(listener -> listener.onRoundStarted(letter, currentRound, totalRounds));
+    }
+    
+    private void handleGameEnded(JsonNode node) {
+        logger.log(System.Logger.Level.INFO, "Game ended");
+        
+        JsonNode leaderboard = node.has("leaderboard") ? node.get("leaderboard") : null;
+        notifyListeners(listener -> listener.onGameEnded(leaderboard));
     }
     
     private void handleError(JsonNode node) {
@@ -248,7 +310,8 @@ public class MultiplayerService implements MultiplayerMessageListener {
         notifyListeners(listener -> listener.onError(errorMessage));
     }
     
-    // Helper to notify all listeners on JavaFX thread
+    // Utility methods
+    
     private void notifyListeners(Consumer<MultiplayerEventListener> action) {
         Platform.runLater(() -> {
             for (MultiplayerEventListener listener : eventListeners) {

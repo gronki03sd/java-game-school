@@ -822,16 +822,46 @@ public class MultiplayerGameController implements MultiplayerEventListener {
     @Override
     public void onResultsReceived(JsonNode results) {
         javafx.application.Platform.runLater(() -> {
-            // SAFETY GUARD - Prevent multiple result dialogs
-            if (resultsDialogShown) {
-                System.out.println("[WARN] Duplicate call prevented - onResultsReceived() already called");
-                return;
-            }
-            resultsDialogShown = true;
-            System.out.println("[RESULTS] Received - Data from server: " + (results != null ? results.size() + " fields" : "null"));
+            System.out.println("[RESULTS] Received round results from server");
+            showRoundResults(results);
+        });
+    }
+    
+    @Override
+    public void onRoundStarted(String letter, int currentRound, int totalRounds) {
+        javafx.application.Platform.runLater(() -> {
+            System.out.println("[ROUND] New round started - Letter: " + letter + 
+                              ", Round: " + currentRound + "/" + totalRounds);
             
-            // Display results dialog
-            showMultiplayerResults(results);
+            // Reset safety guards for new round
+            countdownStarted = false;
+            roundEnded = false;
+            resultsDialogShown = false;
+            
+            // Update game state
+            this.currentLetter = letter;
+            this.currentRound = currentRound;
+            this.totalRounds = totalRounds;
+            
+            // Update UI
+            letterLabel.setText(letter);
+            roundLabel.setText("Manche " + currentRound + "/" + totalRounds);
+            
+            // Clear input fields
+            for (TextField field : inputFields.values()) {
+                field.clear();
+            }
+            
+            // Start countdown
+            startPlayerTurn();
+        });
+    }
+    
+    @Override
+    public void onGameEnded(JsonNode leaderboard) {
+        javafx.application.Platform.runLater(() -> {
+            System.out.println("[GAME] Game ended - Showing leaderboard");
+            showLeaderboard(leaderboard);
         });
     }
     
@@ -915,6 +945,145 @@ public class MultiplayerGameController implements MultiplayerEventListener {
                 System.out.println("[NAV] Back to Lobby clicked");
                 handleBackToLobby();
             }
+        }
+    }
+    
+    /**
+     * Display round results and allow progression to next round
+     */
+    private void showRoundResults(JsonNode results) {
+        System.out.println("[DIALOG] Round results dialog");
+        
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Résultats de la manche " + currentRound);
+        alert.setHeaderText("Fin de la manche!");
+        alert.setResizable(true);
+        alert.getDialogPane().setPrefWidth(600);
+        alert.getDialogPane().setPrefHeight(400);
+        
+        StringBuilder content = new StringBuilder();
+        content.append("=== RÉSULTATS MANCHE ").append(currentRound).append(" ===\n\n");
+        
+        if (results != null && results.isArray()) {
+            content.append("🏆 CLASSEMENT:\n");
+            int position = 1;
+            for (JsonNode playerResult : results) {
+                String name = playerResult.has("playerName") ? playerResult.get("playerName").asText() : "Joueur";
+                int totalScore = playerResult.has("totalScore") ? playerResult.get("totalScore").asInt() : 0;
+                int roundScore = playerResult.has("roundScore") ? playerResult.get("roundScore").asInt() : 0;
+                
+                String medal = position == 1 ? "🥇" : position == 2 ? "🥈" : position == 3 ? "🥉" : "  ";
+                content.append(String.format("%s %d. %s - %d pts (+%d cette manche)\n", 
+                              medal, position++, name, totalScore, roundScore));
+            }
+        }
+        
+        content.append("\n=== VOS RÉPONSES ===\n");
+        for (Map.Entry<Category, TextField> entry : inputFields.entrySet()) {
+            String categoryName = entry.getKey().getName();
+            String answer = entry.getValue().getText().trim();
+            content.append("• ").append(categoryName).append(": ");
+            content.append(answer.isEmpty() ? "(pas de réponse)" : answer).append("\n");
+        }
+        
+        alert.setContentText(content.toString());
+        
+        // Add custom buttons based on game state
+        if (currentRound < totalRounds) {
+            ButtonType nextRoundBtn = new ButtonType("Manche suivante");
+            ButtonType exitBtn = new ButtonType("Quitter");
+            alert.getButtonTypes().setAll(nextRoundBtn, exitBtn);
+            
+            Optional<ButtonType> result = alert.showAndWait();
+            if (result.isPresent()) {
+                if (result.get() == nextRoundBtn) {
+                    // Next round will be started by server automatically
+                    System.out.println("[NAV] Waiting for next round from server");
+                } else {
+                    navigateToMainMenu();
+                }
+            }
+        } else {
+            // Last round - leaderboard will be shown automatically
+            ButtonType okBtn = new ButtonType("Voir le classement final");
+            alert.getButtonTypes().setAll(okBtn);
+            alert.showAndWait();
+        }
+    }
+    
+    /**
+     * Display final leaderboard at game end
+     */
+    private void showLeaderboard(JsonNode leaderboard) {
+        System.out.println("[DIALOG] Final leaderboard");
+        
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Classement Final");
+        alert.setHeaderText("🏁 Partie Terminée!");
+        alert.setResizable(true);
+        alert.getDialogPane().setPrefWidth(650);
+        alert.getDialogPane().setPrefHeight(450);
+        
+        StringBuilder content = new StringBuilder();
+        content.append("🏆 CLASSEMENT FINAL 🏆\n\n");
+        
+        if (leaderboard != null && leaderboard.isArray()) {
+            int position = 1;
+            for (JsonNode playerScore : leaderboard) {
+                String name = playerScore.has("playerName") ? playerScore.get("playerName").asText() : "Joueur";
+                int totalScore = playerScore.has("totalScore") ? playerScore.get("totalScore").asInt() : 0;
+                
+                String decoration = "";
+                if (position == 1) {
+                    decoration = "👑 CHAMPION! 👑";
+                } else if (position == 2) {
+                    decoration = "🥈 Vice-Champion";
+                } else if (position == 3) {
+                    decoration = "🥉 Troisième place";
+                }
+                
+                content.append(String.format("%d. %s - %d points %s\n", 
+                              position++, name, totalScore, decoration));
+            }
+        }
+        
+        content.append("\n\nMerci d'avoir joué! 🎉");
+        alert.setContentText(content.toString());
+        
+        // Add exit button
+        ButtonType exitBtn = new ButtonType("Retour au Menu Principal");
+        alert.getButtonTypes().setAll(exitBtn);
+        
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent()) {
+            navigateToMainMenu();
+        }
+    }
+    
+    /**
+     * Navigate back to main menu
+     */
+    private void navigateToMainMenu() {
+        System.out.println("[NAV] Returning to main menu");
+        try {
+            if (countdown != null) countdown.stop();
+            
+            Stage stage = (Stage) letterLabel.getScene().getWindow();
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/MainMenu.fxml"));
+            Parent root = loader.load();
+            Scene scene = new Scene(root, 1000, 750);
+            
+            // Apply theme
+            if (darkMode) {
+                scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-dark.css").toExternalForm());
+            } else {
+                scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-light.css").toExternalForm());
+            }
+            
+            stage.setScene(scene);
+            stage.show();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
     

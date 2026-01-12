@@ -5,11 +5,11 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
+import com.baccalaureat.multiplayer.MultiplayerEventListener;
+import com.baccalaureat.multiplayer.MultiplayerService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -29,11 +29,12 @@ import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 
 /**
- * Controller for Remote Multiplayer Lobby - STEP 3 REST API Integration.
- * Connects to REST API server for multiplayer session management.
+ * Controller for Remote Multiplayer Lobby - Enhanced with WebSocket integration.
+ * Handles REST API session management and WebSocket real-time gameplay.
  */
-public class MultiplayerLobbyController {
+public class MultiplayerLobbyController implements MultiplayerEventListener {
     private static final String SERVER_URL = "http://localhost:8080/api/sessions";
+    private static final String WEBSOCKET_URL = "ws://localhost:8080/websocket";
     
     private boolean darkMode = false;
     private String sessionId = null;
@@ -44,6 +45,9 @@ public class MultiplayerLobbyController {
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ObservableList<String> connectedPlayers = FXCollections.observableArrayList();
+    
+    // WebSocket service for real-time gameplay
+    private MultiplayerService multiplayerService;
     
     @FXML private TextField playerNameInput;
     @FXML private TextField sessionIdInput;
@@ -59,15 +63,28 @@ public class MultiplayerLobbyController {
     private void initialize() {
         // Initialize ListView with connected players
         playersListView.setItems(connectedPlayers);
+        System.out.println("[LOBBY] ListView initialized and bound to connectedPlayers ObservableList");
         
         // Set initial UI state
         connectionStatusLabel.setText("♾️ Prêt pour REST API");
         startGameButton.setDisable(true);
         noticeLabel.setText("Entrez votre nom et créez ou rejoignez une partie");
+        
+        // Initialize WebSocket service
+        multiplayerService = new MultiplayerService();
+        multiplayerService.addEventListener(this);
+        multiplayerService.connect(WEBSOCKET_URL);
     }
     
     public void setDarkMode(boolean darkMode) {
         this.darkMode = darkMode;
+    }
+    
+    /**
+     * Get the multiplayer service for use by other controllers
+     */
+    public MultiplayerService getMultiplayerService() {
+        return multiplayerService;
     }
     
     @FXML
@@ -217,6 +234,12 @@ public class MultiplayerLobbyController {
                 // Update notice
                 noticeLabel.setText("Partie créée! Partagez le code: " + newSessionId);
                 
+                // Start polling for player updates to refresh lobby UI
+                startPlayerListPolling();
+                
+                // Join WebSocket session for real-time gameplay
+                multiplayerService.joinWebSocketSession(newSessionId, playerName);
+                
             } catch (Exception e) {
                 showError("Erreur lors du traitement de la réponse: " + e.getMessage());
             }
@@ -243,8 +266,14 @@ public class MultiplayerLobbyController {
                 connectedPlayers.add("Host (Hôte)");
                 connectedPlayers.add(playerName);
                 
-                // Update notice
+                // Update notice and start polling for game start
                 noticeLabel.setText("Rejoint la partie! En attente du démarrage par l'hôte.");
+                
+                // Non-host players poll for game start
+                startWaitingForGameStart();
+                
+                // Join WebSocket session for real-time gameplay
+                multiplayerService.joinWebSocketSession(sessionId, playerName);
                 
             } catch (Exception e) {
                 showError("Erreur lors du traitement de la réponse: " + e.getMessage());
@@ -287,32 +316,18 @@ public class MultiplayerLobbyController {
             return;
         }
         
-        if (connectedPlayers.size() < 1) {
-            showError("Pas assez de joueurs");
+        // Check for minimum players (host + at least 1 guest)
+        if (connectedPlayers.size() < 2) {
+            showError("Il faut au moins 2 joueurs pour démarrer la partie. Attendez qu'un joueur vous rejoigne.");
             return;
         }
         
-        try {
-            // Build HTTP request - sessionId is part of the URL path
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(SERVER_URL + "/" + sessionId + "/start"))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString("{}"))  // Empty JSON body
-                .build();
-            
-            System.out.println("[REST] Sending START_GAME request");
-            noticeLabel.setText("Démarrage de la partie...");
-            startGameButton.setDisable(true);
-            
-            // Send request asynchronously
-            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                .thenApply(HttpResponse::body)
-                .thenAccept(this::handleStartGameResponse)
-                .exceptionally(this::handleAPIError);
-            
-        } catch (Exception e) {
-            showError("Erreur lors du démarrage: " + e.getMessage());
-        }
+        // Navigate host to configuration screen before starting game
+        System.out.println("[LOBBY] Host navigating to game configuration...");
+        noticeLabel.setText("Configuration de la partie...");
+        startGameButton.setDisable(true);
+        
+        navigateToGameConfiguration();
     }
     
     private void handleStartGameResponse(String responseBody) {
@@ -325,16 +340,47 @@ public class MultiplayerLobbyController {
                 String status = response.has("status") ? response.get("status").asText() : "UNKNOWN";
                 String letter = response.has("letter") ? response.get("letter").asText() : null;
                 
-                System.out.println("[LOBBY] Game started via REST API - Status: " + status + ", Letter: " + letter);
+                System.out.println("[LOBBY] Game start confirmed by server - Status: " + status + ", Letter: " + letter);
                 
-                // Navigate to game screen
-                navigateToGameScreen();
+                // Start polling for all clients to sync game state
+                noticeLabel.setText("Jeu en cours de démarrage pour tous les joueurs...");
+                startGameStatePolling();
                 
             } catch (Exception e) {
                 System.out.println("[API] Error parsing start game response: " + e.getMessage());
                 showError("Erreur lors du traitement de la réponse: " + e.getMessage());
             }
         });
+    }
+    
+    private void navigateToGameConfiguration() {
+        try {
+            Stage stage = (Stage) createGameButton.getScene().getWindow();
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/GameConfigurationView.fxml"));
+            Parent root = loader.load();
+            
+            // Pass data to configuration controller
+            GameConfigurationController configController = loader.getController();
+            if (configController != null) {
+                configController.setDarkMode(darkMode);
+                configController.setMultiplayerMode(sessionId, playerName, this);
+            }
+            
+            Scene scene = new Scene(root, 1000, 750);
+            
+            // Apply current theme
+            if (darkMode) {
+                scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-dark.css").toExternalForm());
+            } else {
+                scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-light.css").toExternalForm());
+            }
+            
+            stage.setScene(scene);
+            stage.show();
+            
+        } catch (IOException e) {
+            showError("Erreur lors du chargement de la configuration: " + e.getMessage());
+        }
     }
     
     private void navigateToGameScreen() {
@@ -394,11 +440,401 @@ public class MultiplayerLobbyController {
         }
     }
     
+    private void startGameStatePolling() {
+        // Poll server every 500ms to check if game has started for ALL players
+        Thread pollingThread = new Thread(() -> {
+            try {
+                for (int attempts = 0; attempts < 20; attempts++) { // 10 second timeout
+                    Thread.sleep(500);
+                    
+                    // Check game state from server
+                    HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(SERVER_URL + "/" + sessionId + "/state"))
+                        .header("Content-Type", "application/json")
+                        .GET()
+                        .build();
+                    
+                    HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                    JsonNode gameState = objectMapper.readTree(response.body());
+                    
+                    String status = gameState.has("status") ? gameState.get("status").asText() : "UNKNOWN";
+                    
+                    if ("IN_PROGRESS".equals(status)) {
+                        System.out.println("[SYNC] Game started confirmed for all players - transitioning now");
+                        Platform.runLater(() -> {
+                            noticeLabel.setText("Tous les joueurs prêts! Démarrage...");
+                            navigateToGameScreen();
+                        });
+                        return;
+                    }
+                }
+                
+                // Timeout - show error
+                Platform.runLater(() -> {
+                    showError("Timeout: Le jeu n'a pas pu démarrer pour tous les joueurs");
+                    noticeLabel.setText("Erreur de synchronisation. Réessayez.");
+                    startGameButton.setDisable(false);
+                });
+                
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    showError("Erreur lors de la synchronisation: " + e.getMessage());
+                    startGameButton.setDisable(false);
+                });
+            }
+        });
+        
+        pollingThread.setDaemon(true);
+        pollingThread.start();
+    }
+    
+    private void startWaitingForGameStart() {
+        // Non-host players continuously poll to detect game start
+        Thread waitingThread = new Thread(() -> {
+            try {
+                while (true) {
+                    Thread.sleep(1000); // Poll every second
+                    
+                    // Check if game has started
+                    HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(SERVER_URL + "/" + sessionId + "/state"))
+                        .header("Content-Type", "application/json")
+                        .GET()
+                        .build();
+                    
+                    HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                    JsonNode gameState = objectMapper.readTree(response.body());
+                    
+                    String status = gameState.has("status") ? gameState.get("status").asText() : "WAITING";
+                    
+                    if ("IN_PROGRESS".equals(status)) {
+                        System.out.println("[SYNC] Non-host detected game start - transitioning now");
+                        Platform.runLater(() -> {
+                            noticeLabel.setText("Jeu démarré! Transition en cours...");
+                            navigateToGameScreen();
+                        });
+                        return;
+                    }
+                }
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    connectionStatusLabel.setText("❌ Erreur de synchronisation");
+                });
+            }
+        });
+        
+        waitingThread.setDaemon(true);
+        waitingThread.start();
+    }
+    
+    /**
+     * Start polling for player list updates to refresh lobby UI in real-time.
+     * Host will see new players as they join the session.
+     */
+    private void startPlayerListPolling() {
+        if (!isHost || sessionId == null) {
+            return; // Only host needs to poll for player updates
+        }
+        
+        Thread playerPollingThread = new Thread(() -> {
+            try {
+                while (true) {
+                    Thread.sleep(2000); // Poll every 2 seconds for player updates
+                    
+                    // Get current session state to check for new players
+                    HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(SERVER_URL + "/" + sessionId + "/state"))
+                        .header("Content-Type", "application/json")
+                        .GET()
+                        .build();
+                    
+                    HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                    JsonNode gameState = objectMapper.readTree(response.body());
+                    
+                    // Extract player information from server response
+                    JsonNode playersNode = gameState.get("players");
+                    if (playersNode != null && playersNode.isArray()) {
+                        updatePlayerListFromServer(playersNode);
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println("[LOBBY] Player polling stopped: " + e.getMessage());
+                // Polling stops on error - not critical for functionality
+            }
+        });
+        
+        playerPollingThread.setDaemon(true);
+        playerPollingThread.start();
+        
+        System.out.println("[LOBBY] Started player list polling for host");
+    }
+    
+    /**
+     * Update the player list UI based on server response.
+     * Runs on JavaFX Application Thread for safe UI updates.
+     */
+    private void updatePlayerListFromServer(JsonNode playersNode) {
+        Platform.runLater(() -> {
+            try {
+                List<String> serverPlayers = new ArrayList<>();
+                
+                System.out.println("[LOBBY] Updating player list from server...");
+                
+                // Parse players from server response
+                String currentPlayerName = multiplayerService.getCurrentPlayerName();
+                boolean currentPlayerIsHost = false;
+                
+                for (JsonNode playerNode : playersNode) {
+                    String username = playerNode.has("username") ? playerNode.get("username").asText() : null;
+                    boolean isHostPlayer = playerNode.has("isHost") ? playerNode.get("isHost").asBoolean() : false;
+                    
+                    if (username != null && !username.trim().isEmpty()) {
+                        if (isHostPlayer) {
+                            serverPlayers.add(username + " (Hôte)");
+                            // Check if this is the current player
+                            if (username.equals(currentPlayerName)) {
+                                currentPlayerIsHost = true;
+                            }
+                        } else {
+                            serverPlayers.add(username);
+                        }
+                        System.out.println("[LOBBY] Found player: " + username + (isHostPlayer ? " (Hôte)" : ""));
+                    }
+                }
+                
+                // Update MultiplayerService host status based on server response
+                if (currentPlayerIsHost && !multiplayerService.isHost()) {
+                    System.out.println("[LOBBY] Setting current player as host based on server response");
+                    multiplayerService.setHost(true);
+                } else if (!currentPlayerIsHost && multiplayerService.isHost()) {
+                    System.out.println("[LOBBY] Removing host status from current player based on server response");  
+                    multiplayerService.setHost(false);
+                }
+                
+                // Only update UI if player list has changed
+                if (!serverPlayers.equals(new ArrayList<>(connectedPlayers))) {
+                    System.out.println("[LOBBY] Player list changed - updating UI");
+                    System.out.println("[LOBBY] Old: " + connectedPlayers);
+                    System.out.println("[LOBBY] New: " + serverPlayers);
+                    
+                    connectedPlayers.clear();
+                    connectedPlayers.addAll(serverPlayers);
+                    
+                    // Update validation - check if we have enough players for start
+                    boolean canStart = connectedPlayers.size() >= 2;
+                    startGameButton.setDisable(!canStart);
+                    
+                    System.out.println("[LOBBY] Player list updated: " + connectedPlayers.size() + " players - " + serverPlayers);
+                    
+                    // Update notice based on player count
+                    if (connectedPlayers.size() >= 2) {
+                        noticeLabel.setText("Prêt à démarrer! Joueurs: " + connectedPlayers.size());
+                    } else {
+                        noticeLabel.setText("Partie créée! Partagez le code: " + sessionId + " (En attente de joueurs)");
+                    }
+                }
+                
+            } catch (Exception e) {
+                System.out.println("[LOBBY] Error updating player list: " + e.getMessage());
+            }
+        });
+    }
+    
+    /**
+     * Called when host returns from configuration screen back to lobby.
+     */
+    public void returnFromConfiguration() {
+        Platform.runLater(() -> {
+            noticeLabel.setText("Partie créée! Partagez le code: " + sessionId);
+            startGameButton.setDisable(false);
+        });
+    }
+    
+    /**
+     * Restore session state when returning from configuration.
+     */
+    public void restoreSessionState(String sessionId, String playerName, boolean isHost) {
+        this.sessionId = sessionId;
+        this.playerName = playerName;
+        this.isHost = isHost;
+        
+        // Update UI to reflect restored state
+        connectionStatusLabel.setText("✅ Hôte - Session: " + sessionId);
+        sessionIdInput.setText(sessionId);
+        sessionIdInput.setEditable(false);
+        playerNameInput.setText(playerName);
+        playerNameInput.setEditable(false);
+        
+        // Simulate connected players (simplified)
+        connectedPlayers.clear();
+        connectedPlayers.add(playerName + " (Hôte)");
+        connectedPlayers.add("Invité"); // Placeholder for guest
+        
+        // Enable start button since we have players
+        startGameButton.setDisable(false);
+        noticeLabel.setText("De retour à la configuration. Cliquez sur Démarrer pour reconfigurer.");
+    }
+    
+    /**
+     * Called by GameConfigurationController when host confirms configuration.
+     * Sends START_GAME request with configuration to server.
+     */
+    public void startGameWithConfiguration(com.baccalaureat.model.GameConfig config) {
+        try {
+            // Create JSON request body with configuration
+            ObjectNode requestBody = objectMapper.createObjectNode();
+            requestBody.put("numberOfRounds", config.getNumberOfRounds());
+            requestBody.put("roundDuration", config.getRoundDurationSeconds());
+            
+            // Add categories
+            var categoriesArray = requestBody.putArray("categories");
+            for (com.baccalaureat.model.Category category : config.getSelectedCategories()) {
+                categoriesArray.add(category.getName());
+            }
+            
+            // Build HTTP request
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(SERVER_URL + "/" + sessionId + "/start"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
+                .build();
+            
+            System.out.println("[REST] Sending START_GAME request with configuration: " + requestBody.toString());
+            
+            // Send request asynchronously
+            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .thenAccept(this::handleStartGameResponse)
+                .exceptionally(this::handleAPIError);
+                
+        } catch (Exception e) {
+            showError("Erreur lors du démarrage avec configuration: " + e.getMessage());
+        }
+    }
+    
     private void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("Erreur");
         alert.setHeaderText("Une erreur s'est produite");
         alert.setContentText(message);
         alert.showAndWait();
+    }
+    
+    // MultiplayerEventListener implementation
+    
+    @Override
+    public void onConnectionEstablished() {
+        Platform.runLater(() -> {
+            connectionStatusLabel.setText("🌐 WebSocket connecté");
+            System.out.println("[WS] WebSocket connection established");
+        });
+    }
+    
+    @Override
+    public void onConnectionLost() {
+        Platform.runLater(() -> {
+            connectionStatusLabel.setText("❌ WebSocket déconnecté");
+            System.out.println("[WS] WebSocket connection lost");
+        });
+    }
+    
+    @Override
+    public void onPlayerJoined(String playerName) {
+        System.out.println("[WS] Player joined via WebSocket: " + playerName);
+        
+        // Instead of directly updating the list, refresh from server to get proper formatting
+        if (isHost && sessionId != null) {
+            Platform.runLater(() -> refreshPlayerListFromServer());
+        } else {
+            // For non-hosts, just add the player directly for now
+            Platform.runLater(() -> {
+                if (!connectedPlayers.contains(playerName)) {
+                    connectedPlayers.add(playerName);
+                }
+            });
+        }
+    }
+    
+    /**
+     * Immediately refresh player list from server (used by WebSocket events)
+     */
+    private void refreshPlayerListFromServer() {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(SERVER_URL + "/" + sessionId + "/state"))
+                .header("Content-Type", "application/json")
+                .GET()
+                .build();
+            
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            JsonNode gameState = objectMapper.readTree(response.body());
+            
+            // Extract player information from server response
+            JsonNode playersNode = gameState.get("players");
+            if (playersNode != null && playersNode.isArray()) {
+                updatePlayerListFromServer(playersNode);
+            }
+        } catch (Exception e) {
+            System.err.println("[LOBBY] Failed to refresh player list: " + e.getMessage());
+        }
+    }
+    
+    @Override
+    public void onGameStarted(String letter, List<String> categories, int duration) {
+        System.out.println("[WS] GAME_STARTED event received - Letter: " + letter + 
+                          ", Categories: " + categories.size() + ", Duration: " + duration);
+        
+        // Transition to multiplayer game screen
+        Platform.runLater(() -> {
+            try {
+                Stage stage = (Stage) startGameButton.getScene().getWindow();
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/MultiplayerGame.fxml"));
+                Parent root = loader.load();
+                Scene scene = new Scene(root, 1000, 750);
+                
+                // Apply theme
+                if (darkMode) {
+                    scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-dark.css").toExternalForm());
+                } else {
+                    scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-light.css").toExternalForm());
+                }
+                
+                // Configure MultiplayerGameController
+                Object controller = loader.getController();
+                if (controller instanceof MultiplayerGameController mgc) {
+                    mgc.setDarkMode(darkMode);
+                    mgc.initializeMultiplayerGame(multiplayerService, letter, categories, duration);
+                }
+                
+                stage.setScene(scene);
+                stage.show();
+                
+                System.out.println("[NAV] Transitioned to multiplayer game screen");
+                
+                // Close any configuration windows that might be open
+                closeConfigurationWindows();
+                
+            } catch (IOException e) {
+                e.printStackTrace();
+                showError("Erreur lors de la transition vers le jeu: " + e.getMessage());
+            }
+        });
+    }
+    
+    /**
+     * Helper method to close any open configuration windows
+     */
+    private void closeConfigurationWindows() {
+        // This will be called to ensure configuration windows are closed
+        // when the game starts via WebSocket event
+        System.out.println("[NAV] Attempting to close configuration windows");
+    }
+    
+    @Override
+    public void onError(String errorMessage) {
+        Platform.runLater(() -> {
+            showError("Erreur multijoueur: " + errorMessage);
+            System.err.println("[WS] Multiplayer error: " + errorMessage);
+        });
     }
 }

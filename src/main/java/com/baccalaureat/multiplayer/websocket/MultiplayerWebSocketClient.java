@@ -140,23 +140,49 @@ public class MultiplayerWebSocketClient {
     }
     
     /**
-     * Helper method to send a join game message.
+     * Helper method to send a join session message.
      * 
-     * @param sessionCode The session code to join
+     * @param sessionId The session ID to join
      * @param playerName The player's display name
      * @return true if sent successfully, false otherwise
      */
-    public boolean sendJoinGame(String sessionCode, String playerName) {
+    public boolean sendJoinSession(String sessionId, String playerName) {
         try {
             ObjectNode message = objectMapper.createObjectNode();
-            message.put("type", "joinGame");
-            message.put("sessionCode", sessionCode);
+            message.put("type", "JOIN_SESSION");
+            message.put("sessionId", sessionId);
             message.put("playerName", playerName);
             
             return sendMessage(objectMapper.writeValueAsString(message));
         } catch (Exception e) {
-            logger.log(System.Logger.Level.ERROR, "Failed to create join game message", e);
-            notifyError("Failed to create join game message: " + e.getMessage());
+            logger.log(System.Logger.Level.ERROR, "Failed to create join session message", e);
+            notifyError("Failed to create join session message: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Helper method to send game start with configuration.
+     * 
+     * @param config Game configuration including rounds, duration, categories
+     * @return true if sent successfully, false otherwise
+     */
+    public boolean sendStartGame(Map<String, Object> config) {
+        try {
+            ObjectNode message = objectMapper.createObjectNode();
+            message.put("type", "START_GAME");
+            message.set("config", objectMapper.valueToTree(config));
+            
+            String messageJson = objectMapper.writeValueAsString(message);
+            System.out.println("[WEBSOCKET] Sending START_GAME message: " + messageJson);
+            
+            boolean sent = sendMessage(messageJson);
+            System.out.println("[WEBSOCKET] START_GAME message sent successfully: " + sent);
+            return sent;
+        } catch (Exception e) {
+            System.err.println("[WEBSOCKET] Failed to create/send START_GAME message: " + e.getMessage());
+            logger.log(System.Logger.Level.ERROR, "Failed to create start game message", e);
+            notifyError("Failed to create start game message: " + e.getMessage());
             return false;
         }
     }
@@ -170,7 +196,7 @@ public class MultiplayerWebSocketClient {
     public boolean sendSubmitAnswers(Map<String, String> answers) {
         try {
             ObjectNode message = objectMapper.createObjectNode();
-            message.put("type", "submitAnswers");
+            message.put("type", "SUBMIT_ANSWERS");
             message.set("answers", objectMapper.valueToTree(answers));
             
             return sendMessage(objectMapper.writeValueAsString(message));
@@ -189,12 +215,30 @@ public class MultiplayerWebSocketClient {
     public boolean sendReadyForNextRound() {
         try {
             ObjectNode message = objectMapper.createObjectNode();
-            message.put("type", "readyForNextRound");
+            message.put("type", "NEXT_ROUND");
             
             return sendMessage(objectMapper.writeValueAsString(message));
         } catch (Exception e) {
-            logger.log(System.Logger.Level.ERROR, "Failed to create ready message", e);
-            notifyError("Failed to create ready message: " + e.getMessage());
+            logger.log(System.Logger.Level.ERROR, "Failed to create next round message", e);
+            notifyError("Failed to create next round message: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Helper method to end the game and show leaderboard.
+     * 
+     * @return true if sent successfully, false otherwise
+     */
+    public boolean sendEndGame() {
+        try {
+            ObjectNode message = objectMapper.createObjectNode();
+            message.put("type", "END_GAME");
+            
+            return sendMessage(objectMapper.writeValueAsString(message));
+        } catch (Exception e) {
+            logger.log(System.Logger.Level.ERROR, "Failed to create end game message", e);
+            notifyError("Failed to create end game message: " + e.getMessage());
             return false;
         }
     }

@@ -113,10 +113,10 @@ public class MultiplayerConnectionTest implements MultiplayerMessageListener {
             return;
         }
         
-        // Test helper method - Join Game
-        logger.log(System.Logger.Level.INFO, "Testing sendJoinGame method...");
-        boolean joinSent = client.sendJoinGame(TEST_SESSION_CODE, TEST_PLAYER_NAME);
-        logger.log(System.Logger.Level.INFO, "Join game message sent: " + joinSent);
+        // Test helper method - Join Session
+        logger.log(System.Logger.Level.INFO, "Testing sendJoinSession method...");
+        boolean joinSent = client.sendJoinSession(TEST_SESSION_CODE, TEST_PLAYER_NAME);
+        logger.log(System.Logger.Level.INFO, "Join session message sent: " + joinSent);
         
         // Wait a moment for potential server response
         try {
@@ -158,9 +158,10 @@ public class MultiplayerConnectionTest implements MultiplayerMessageListener {
         logger.log(System.Logger.Level.INFO, "\n--- TEST 3: Message Parsing ---");
         
         // Test with sample JSON messages (simulate server responses)
-        testParseMessage("{\"type\":\"gameCreated\",\"sessionId\":\"ABC123\",\"success\":true}");
-        testParseMessage("{\"type\":\"playerJoined\",\"playerName\":\"TestPlayer\",\"sessionId\":\"ABC123\"}");
-        testParseMessage("{\"type\":\"error\",\"message\":\"Invalid session code\"}");
+        testParseMessage("{\"type\":\"SESSION_JOINED\",\"sessionId\":\"ABC123\",\"playerName\":\"TestPlayer\"}");
+        testParseMessage("{\"type\":\"PLAYER_JOINED\",\"playerName\":\"TestPlayer\"}");
+        testParseMessage("{\"type\":\"GAME_STARTED\",\"letter\":\"A\",\"roundDuration\":60}");
+        testParseMessage("{\"type\":\"ERROR\",\"message\":\"Invalid session code\"}");
         testParseMessage("invalid json"); // Test error handling
         
         logger.log(System.Logger.Level.INFO, "Parsed messages successfully, check logs for details");

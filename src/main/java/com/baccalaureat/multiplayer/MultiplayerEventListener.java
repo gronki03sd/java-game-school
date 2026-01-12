@@ -52,6 +52,20 @@ public interface MultiplayerEventListener {
     default void onResultsReceived(JsonNode results) {}
     
     /**
+     * Called when a new round starts
+     * @param letter The new letter for this round
+     * @param currentRound Current round number
+     * @param totalRounds Total number of rounds
+     */
+    default void onRoundStarted(String letter, int currentRound, int totalRounds) {}
+    
+    /**
+     * Called when the game ends and leaderboard is available
+     * @param leaderboard JSON array of final player rankings
+     */
+    default void onGameEnded(JsonNode leaderboard) {}
+    
+    /**
      * Called when an error occurs
      * @param errorMessage Human-readable error description
      */
