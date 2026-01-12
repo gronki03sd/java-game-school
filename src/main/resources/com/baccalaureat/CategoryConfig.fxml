@@ -4,7 +4,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.baccalaureat.controller.CategoryConfigController">
+<VBox xmlns="http://javafx.com/javafx/17.0.2" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.baccalaureat.controller.CategoryConfigController" styleClass="root">
    <children>
       <!-- Header -->
       <HBox alignment="CENTER_LEFT" spacing="20.0" styleClass="header-section">

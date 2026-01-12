@@ -7,8 +7,7 @@
 
 <VBox xmlns="http://javafx.com/javafx/21.0.2" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.baccalaureat.controller.MainMenuController"
-      spacing="25" alignment="CENTER" styleClass="main-menu"
-    stylesheets="@styles.css">
+      spacing="25" alignment="CENTER" styleClass="main-menu">
     
     <padding>
         <Insets top="50" right="50" bottom="50" left="50"/>
@@ -61,9 +60,8 @@
         <Button fx:id="howToPlayButton" text="📖  How to Play" 
             onAction="#handleHowToPlay" styleClass="secondary-button" prefWidth="280"/>
         <HBox spacing="15" alignment="CENTER">
-            <Button fx:id="themeToggleButton" text="🌙 Dark Mode" onAction="#handleThemeToggle" styleClass="secondary-button" prefWidth="200"/>
-            <Button fx:id="categoryConfigButton" text="⚙️ Categories" onAction="#handleCategoryConfig" styleClass="secondary-button" prefWidth="170"/>
-            <Button fx:id="settingsButton" text="⚙️ Settings" onAction="#handleSettings" styleClass="secondary-button" prefWidth="160"/>
+            <Button fx:id="categoryConfigButton" text="📂 Categories" onAction="#handleCategoryConfig" styleClass="secondary-button" prefWidth="200"/>
+            <Button fx:id="settingsButton" text="⚙️ Settings" onAction="#handleSettings" styleClass="secondary-button" prefWidth="200"/>
         </HBox>
         </VBox>
     

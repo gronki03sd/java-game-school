@@ -5,13 +5,14 @@ import java.io.IOException;
 import com.baccalaureat.model.GameConfig;
 import com.baccalaureat.model.GameSession;
 import com.baccalaureat.service.CategoryService;
+import com.baccalaureat.util.DialogHelper;
+import com.baccalaureat.util.ThemeManager;
 
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.stage.Modality;
@@ -22,20 +23,17 @@ public class MainMenuController {
     @FXML private Button startMultiplayerButton;
     @FXML private Button remoteMultiplayerButton;
     @FXML private Button howToPlayButton;
-    @FXML private Button themeToggleButton;
     @FXML private Button categoryConfigButton;
     @FXML private Button settingsButton;
     @FXML private Label highScoreLabel;
     @FXML private Label gamesPlayedLabel;
     @FXML private Label categoriesCountLabel;
 
-    private boolean darkMode = false;
     private final CategoryService categoryService = new CategoryService();
 
     @FXML
     private void initialize() {
         updateStatistics();
-        updateThemeButton();
     }
 
     private void updateStatistics() {
@@ -50,17 +48,6 @@ public class MainMenuController {
     private void updateCategoriesCount() {
         int enabledCount = categoryService.getEnabledCategories().size();
         categoriesCountLabel.setText(String.valueOf(enabledCount));
-    }
-
-    public void setDarkMode(boolean darkMode) {
-        this.darkMode = darkMode;
-        updateThemeButton();
-    }
-
-    private void updateThemeButton() {
-        if (themeToggleButton != null) {
-            themeToggleButton.setText(darkMode ? "☀️ Light Mode" : "🌙 Dark Mode");
-        }
     }
 
     @FXML
@@ -78,31 +65,17 @@ public class MainMenuController {
         Stage stage = (Stage) remoteMultiplayerButton.getScene().getWindow();
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/MultiplayerLobby.fxml"));
         Parent root = loader.load();
-        Scene scene = new Scene(root, 1000, 750);
         
-        // Apply current theme
-        if (darkMode) {
-            scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-dark.css").toExternalForm());
-        } else {
-            scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-light.css").toExternalForm());
-        }
-        
-        // Pass dark mode setting to the lobby controller
-        Object controller = loader.getController();
-        if (controller instanceof MultiplayerLobbyController mlc) {
-            mlc.setDarkMode(darkMode);
-        }
-        
-        stage.setScene(scene);
+        ThemeManager.switchToFullScreenScene(stage, root);
         stage.show();
     }
 
     @FXML
     private void handleHowToPlay(ActionEvent event) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Comment Jouer");
-        alert.setHeaderText("🎯 Règles du Baccalauréat+");
-        alert.setContentText("""
+        DialogHelper.showInformation(
+            "Comment Jouer",
+            "🎯 Règles du Baccalauréat+",
+            """
             📝 RÈGLES DU JEU:
             
             1. Une lettre aléatoire est tirée au début de chaque manche
@@ -125,24 +98,6 @@ public class MainMenuController {
             
             Bonne chance! 🍀
             """);
-        alert.showAndWait();
-    }
-
-    @FXML
-    private void handleThemeToggle(ActionEvent event) {
-        darkMode = !darkMode;
-        updateThemeButton();
-        
-        // Apply theme to current scene
-        Scene scene = themeToggleButton.getScene();
-        if (scene != null) {
-            scene.getStylesheets().removeIf(s -> s.contains("theme-light.css") || s.contains("theme-dark.css"));
-            if (darkMode) {
-                scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-dark.css").toExternalForm());
-            } else {
-                scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-light.css").toExternalForm());
-            }
-        }
     }
 
     @FXML
@@ -156,11 +111,7 @@ public class MainMenuController {
             categoryStage.initModality(Modality.APPLICATION_MODAL);
             Scene scene = new Scene(root, 700, 500);
             
-            if (darkMode) {
-                scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-dark.css").toExternalForm());
-            } else {
-                scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-light.css").toExternalForm());
-            }
+            ThemeManager.applySavedTheme(scene);
             
             categoryStage.setScene(scene);
             categoryStage.showAndWait();
@@ -176,17 +127,30 @@ public class MainMenuController {
     @FXML
     private void handleSettings(ActionEvent event) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/Settings.fxml"));
+            java.net.URL fxmlUrl = getClass().getResource("/com/baccalaureat/Settings.fxml");
+            if (fxmlUrl == null) {
+                DialogHelper.showError("Error", null, "Settings file not found");
+                return;
+            }
+            
+            FXMLLoader loader = new FXMLLoader(fxmlUrl);
             Parent root = loader.load();
 
             Stage settingsStage = new Stage();
             settingsStage.setTitle("Settings");
             settingsStage.initModality(Modality.APPLICATION_MODAL);
-            settingsStage.setScene(new Scene(root, 400, 300));
-            settingsStage.show();
+            
+            Scene scene = new Scene(root, 600, 650);
+            ThemeManager.applySavedTheme(scene);
+            settingsStage.setScene(scene);
+            settingsStage.showAndWait();
+            
+            // Refresh main menu with current theme after settings close
+            ThemeManager.applySavedTheme(settingsButton.getScene());
             
         } catch (IOException e) {
             e.printStackTrace();
+            DialogHelper.showError("Error", null, "Could not open settings: " + e.getMessage());
         }
     }
     
@@ -195,22 +159,14 @@ public class MainMenuController {
             Stage stage = (Stage) startSoloButton.getScene().getWindow();
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/GameConfigurationView.fxml"));
             Parent root = loader.load();
-            Scene scene = new Scene(root, 1000, 750);
-            
-            if (darkMode) {
-                scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-dark.css").toExternalForm());
-            } else {
-                scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-light.css").toExternalForm());
-            }
             
             // Configure the GameConfigurationController
             Object controller = loader.getController();
             if (controller instanceof GameConfigurationController gcc) {
-                gcc.setDarkMode(darkMode);
                 gcc.setGameMode(mode);
             }
             
-            stage.setScene(scene);
+            ThemeManager.switchToFullScreenScene(stage, root);
             stage.show();
         } catch (IOException e) {
             e.printStackTrace();

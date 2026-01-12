@@ -14,8 +14,11 @@ import com.baccalaureat.model.GameSession;
 import com.baccalaureat.model.RoundState;
 import com.baccalaureat.model.ValidationResult;
 import com.baccalaureat.model.ValidationStatus;
-import com.baccalaureat.service.ValidationService;
 import com.baccalaureat.service.CategoryService;
+import com.baccalaureat.service.ValidationService;
+import com.baccalaureat.util.DialogHelper;
+import com.baccalaureat.util.ThemeManager;
+
 import javafx.animation.KeyFrame;
 import javafx.animation.ScaleTransition;
 import javafx.animation.Timeline;
@@ -26,7 +29,6 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
@@ -324,13 +326,13 @@ public class GameController {
     private void handleBackToMenu() {
         if (countdown != null) countdown.stop();
 
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Quitter la partie");
-        confirm.setHeaderText("Voulez-vous vraiment quitter?");
-        confirm.setContentText("Votre progression sera perdue.");
+        boolean confirmed = DialogHelper.showConfirmation(
+            "Quitter la partie",
+            "Voulez-vous vraiment quitter?",
+            "Votre progression sera perdue."
+        );
 
-        Optional<ButtonType> result = confirm.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
+        if (confirmed) {
             session.endGame();
             navigateToMenu();
         } else {
@@ -365,13 +367,13 @@ public class GameController {
     private void handleSkipRound() {
         if (countdown != null) countdown.stop();
 
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Passer la manche");
-        confirm.setHeaderText("Voulez-vous passer cette manche?");
-        confirm.setContentText("Vous ne gagnerez aucun point pour cette manche.");
+        boolean confirmed = DialogHelper.showConfirmation(
+            "Passer la manche",
+            "Voulez-vous passer cette manche?",
+            "Vous ne gagnerez aucun point pour cette manche."
+        );
 
-        Optional<ButtonType> result = confirm.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
+        if (confirmed) {
             proceedToNextRound();
         } else {
             if (remainingSeconds > 0 && roundState == RoundState.RUNNING) {
@@ -623,20 +625,16 @@ public class GameController {
                         "Score total: " + session.getCurrentScore() + "\n\n" +
                         "Manche " + session.getCurrentRound() + "/" + session.getTotalRounds();
 
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Résultats de la manche");
-        alert.setHeaderText(title);
-        alert.setContentText(message);
-        
-        // Make dialog resizable
-        alert.setResizable(true);
-
         if (session.getCurrentRound() < session.getTotalRounds()) {
-            ButtonType nextRound = new ButtonType("Manche suivante →");
+            ButtonType nextRound = new ButtonType("Manche suivante →", ButtonBar.ButtonData.OK_DONE);
             ButtonType quit = new ButtonType("Quitter", ButtonBar.ButtonData.CANCEL_CLOSE);
-            alert.getButtonTypes().setAll(nextRound, quit);
 
-            Optional<ButtonType> result = alert.showAndWait();
+            Optional<ButtonType> result = DialogHelper.showConfirmation(
+                "Résultats de la manche",
+                title,
+                message,
+                nextRound, quit
+            );
             
             if (result.isPresent() && result.get() == nextRound) {
                 showingResults = false; // Reset dialog guard
@@ -648,8 +646,8 @@ public class GameController {
             }
         } else {
             session.endGame();
-            alert.getButtonTypes().setAll(new ButtonType("Voir les résultats"));
-            alert.showAndWait();
+            ButtonType finish = new ButtonType("Voir les résultats", ButtonBar.ButtonData.OK_DONE);
+            DialogHelper.showConfirmation("Résultats de la manche", title, message, finish);
             showingResults = false; // Reset dialog guard
             showFinalResults();
         }
@@ -673,9 +671,8 @@ public class GameController {
     }
 
     private void showFinalResults() {
-        Alert finalAlert = new Alert(Alert.AlertType.INFORMATION);
-        finalAlert.setTitle("🏆 Partie terminée!");
-        finalAlert.setHeaderText("Score final: " + session.getCurrentScore() + " points");
+        String title = "🏆 Partie terminée!";
+        String header = "Score final: " + session.getCurrentScore() + " points";
 
         String rating;
         int maxPossible = session.getTotalRounds() * session.getCategories().size() * 2;
@@ -686,15 +683,19 @@ public class GameController {
         else if (percentage >= 40) rating = "👍 Pas mal!";
         else rating = "💪 Continuez à vous entraîner!";
 
-        finalAlert.setContentText(rating + "\n\n" +
+        String content = rating + "\n\n" +
                 "Meilleur score: " + GameSession.getHighScore() + "\n" +
-                "Parties jouées: " + GameSession.getGamesPlayed());
+                "Parties jouées: " + GameSession.getGamesPlayed();
 
-        ButtonType playAgain = new ButtonType("Rejouer");
-        ButtonType menu = new ButtonType("Menu principal");
-        finalAlert.getButtonTypes().setAll(playAgain, menu);
+        ButtonType playAgain = new ButtonType("Rejouer", ButtonBar.ButtonData.OK_DONE);
+        ButtonType menu = new ButtonType("Menu principal", ButtonBar.ButtonData.CANCEL_CLOSE);
 
-        Optional<ButtonType> result = finalAlert.showAndWait();
+        Optional<ButtonType> result = DialogHelper.showConfirmation(
+            title,
+            header,
+            content,
+            playAgain, menu
+        );
         if (result.isPresent() && result.get() == playAgain) {
             restartGame();
         } else {
@@ -717,7 +718,7 @@ public class GameController {
         try {
             Stage stage = (Stage) letterLabel.getScene().getWindow();
             Parent root = FXMLLoader.load(getClass().getResource("/com/baccalaureat/MainMenu.fxml"));
-            stage.setScene(new Scene(root, 900, 700));
+            ThemeManager.switchToFullScreenScene(stage, root);
             stage.show();
         } catch (IOException e) {
             e.printStackTrace();
