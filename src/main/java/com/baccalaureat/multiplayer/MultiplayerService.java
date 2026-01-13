@@ -253,6 +253,8 @@ public class MultiplayerService implements MultiplayerMessageListener {
         try {
             String letter = node.has("letter") ? node.get("letter").asText() : null;
             int duration = node.has("roundDuration") ? node.get("roundDuration").asInt() : 60;
+            int totalRounds = node.has("totalRounds") ? node.get("totalRounds").asInt() : 1;
+            int currentRound = node.has("currentRound") ? node.get("currentRound").asInt() : 1;
             
             List<String> categories = new ArrayList<>();
             if (node.has("categories") && node.get("categories").isArray()) {
@@ -260,10 +262,12 @@ public class MultiplayerService implements MultiplayerMessageListener {
             }
             
             System.out.println("[MULTIPLAYER] Parsed GAME_STARTED - Letter: " + letter + 
-                             ", Duration: " + duration + "s, Categories: " + categories.size());
+                             ", Duration: " + duration + "s, Categories: " + categories.size() +
+                             ", Total Rounds: " + totalRounds + ", Current Round: " + currentRound);
             
             logger.log(System.Logger.Level.INFO, 
-                "Game started: letter=" + letter + ", duration=" + duration + ", categories=" + categories.size());
+                "Game started: letter=" + letter + ", duration=" + duration + 
+                ", categories=" + categories.size() + ", rounds=" + totalRounds);
             
             System.out.println("[MULTIPLAYER] Notifying " + this.eventListeners.size() + " listeners of GAME_STARTED");
             notifyListeners(listener -> listener.onGameStarted(letter, categories, duration));

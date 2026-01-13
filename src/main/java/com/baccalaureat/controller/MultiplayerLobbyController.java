@@ -12,6 +12,7 @@ import com.baccalaureat.multiplayer.MultiplayerEventListener;
 import com.baccalaureat.multiplayer.MultiplayerService;
 import com.baccalaureat.util.DialogHelper;
 import com.baccalaureat.util.ThemeManager;
+import com.baccalaureat.util.ConfigLoader;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -34,13 +35,12 @@ import javafx.stage.Stage;
  * Handles REST API session management and WebSocket real-time gameplay.
  */
 public class MultiplayerLobbyController implements MultiplayerEventListener {
-    private static final String SERVER_URL = "http://localhost:8080/api/sessions";
-    private static final String WEBSOCKET_URL = "ws://localhost:8080/websocket";
     
     private boolean darkMode = false;
     private String sessionId = null;
     private boolean isHost = false;
     private String playerName = "";
+    private Stage configurationStage = null; // Track configuration window
     
     // HTTP client for REST API calls
     private final HttpClient httpClient = HttpClient.newHttpClient();
@@ -74,7 +74,7 @@ public class MultiplayerLobbyController implements MultiplayerEventListener {
         // Initialize WebSocket service
         multiplayerService = new MultiplayerService();
         multiplayerService.addEventListener(this);
-        multiplayerService.connect(WEBSOCKET_URL);
+        multiplayerService.connect(ConfigLoader.getWebSocketUrl());
     }
     
     public void setDarkMode(boolean darkMode) {
@@ -150,7 +150,7 @@ public class MultiplayerLobbyController implements MultiplayerEventListener {
             
             // Build HTTP request
             HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(SERVER_URL + "/create"))
+                .uri(URI.create(ConfigLoader.getApiUrl() + "/create"))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
                 .build();
@@ -178,7 +178,7 @@ public class MultiplayerLobbyController implements MultiplayerEventListener {
             
             // Build HTTP request
             HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(SERVER_URL + "/join"))
+                .uri(URI.create(ConfigLoader.getApiUrl() + "/join"))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
                 .build();
@@ -379,6 +379,9 @@ public class MultiplayerLobbyController implements MultiplayerEventListener {
             stage.setScene(scene);
             stage.show();
             
+            // Track the configuration stage for later closing if needed
+            configurationStage = stage;
+            
         } catch (IOException e) {
             showError("Erreur lors du chargement de la configuration: " + e.getMessage());
         }
@@ -436,7 +439,7 @@ public class MultiplayerLobbyController implements MultiplayerEventListener {
                     
                     // Check game state from server
                     HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create(SERVER_URL + "/" + sessionId + "/state"))
+                        .uri(URI.create(ConfigLoader.getApiUrl() + "/" + sessionId + "/state"))
                         .header("Content-Type", "application/json")
                         .GET()
                         .build();
@@ -484,7 +487,7 @@ public class MultiplayerLobbyController implements MultiplayerEventListener {
                     
                     // Check if game has started
                     HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create(SERVER_URL + "/" + sessionId + "/state"))
+                        .uri(URI.create(ConfigLoader.getApiUrl() + "/" + sessionId + "/state"))
                         .header("Content-Type", "application/json")
                         .GET()
                         .build();
@@ -530,7 +533,7 @@ public class MultiplayerLobbyController implements MultiplayerEventListener {
                     
                     // Get current session state to check for new players
                     HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create(SERVER_URL + "/" + sessionId + "/state"))
+                        .uri(URI.create(ConfigLoader.getApiUrl() + "/" + sessionId + "/state"))
                         .header("Content-Type", "application/json")
                         .GET()
                         .build();
@@ -681,7 +684,7 @@ public class MultiplayerLobbyController implements MultiplayerEventListener {
             
             // Build HTTP request
             HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(SERVER_URL + "/" + sessionId + "/start"))
+                .uri(URI.create(ConfigLoader.getApiUrl() + "/" + sessionId + "/start"))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
                 .build();
@@ -744,7 +747,7 @@ public class MultiplayerLobbyController implements MultiplayerEventListener {
     private void refreshPlayerListFromServer() {
         try {
             HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(SERVER_URL + "/" + sessionId + "/state"))
+                .uri(URI.create(ConfigLoader.getApiUrl() + "/" + sessionId + "/state"))
                 .header("Content-Type", "application/json")
                 .GET()
                 .build();
@@ -766,6 +769,9 @@ public class MultiplayerLobbyController implements MultiplayerEventListener {
     public void onGameStarted(String letter, List<String> categories, int duration) {
         System.out.println("[WS] GAME_STARTED event received - Letter: " + letter + 
                           ", Categories: " + categories.size() + ", Duration: " + duration);
+        
+        // Check if there's an open configuration window that needs to be closed
+        closeConfigurationWindows();
         
         // Transition to multiplayer game screen
         Platform.runLater(() -> {
@@ -793,9 +799,6 @@ public class MultiplayerLobbyController implements MultiplayerEventListener {
                 stage.show();
                 
                 System.out.println("[NAV] Transitioned to multiplayer game screen");
-                
-                // Close any configuration windows that might be open
-                closeConfigurationWindows();
                 
             } catch (IOException e) {
                 e.printStackTrace();

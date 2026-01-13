@@ -6,11 +6,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.baccalaureat.controller.GameController;
+import com.baccalaureat.controller.MultiplayerGameController;
 import com.baccalaureat.model.Category;
 import com.baccalaureat.model.GameConfig;
+import com.baccalaureat.multiplayer.MultiplayerEventListener;
 import com.baccalaureat.service.CategoryService;
 import com.baccalaureat.util.DialogHelper;
 import com.baccalaureat.util.ThemeManager;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -32,7 +36,7 @@ import javafx.stage.Stage;
  * Controller for the Game Configuration Screen.
  * Replaces the old difficulty selection system with customizable game settings.
  */
-public class GameConfigurationController {
+public class GameConfigurationController implements MultiplayerEventListener {
     
     @FXML private Label modeLabel;
     @FXML private Button manageCategoriesButton;
@@ -66,6 +70,9 @@ public class GameConfigurationController {
     private String multiplayerSessionId;
     private String multiplayerPlayerName;
     private MultiplayerLobbyController lobbyController;
+    
+    // Timeout management
+    private Thread timeoutThread = null;
     
     @FXML
     private void initialize() {
@@ -108,6 +115,12 @@ public class GameConfigurationController {
         // Update start button text for multiplayer
         startGameButton.setText("Confirmer et Démarrer");
         
+        // Register as WebSocket event listener for GAME_STARTED
+        if (lobbyController != null && lobbyController.getMultiplayerService() != null) {
+            lobbyController.getMultiplayerService().addEventListener(this);
+            System.out.println("[CONFIG] Registered as WebSocket event listener");
+        }
+        
         // Force update category display to ensure categories are loaded
         System.out.println("[CONFIG] Multiplayer mode set - forcing category update");
         updateCategoryDisplay();
@@ -120,6 +133,18 @@ public class GameConfigurationController {
      */
     public void closeConfigurationWindow() {
         Platform.runLater(() -> {
+            // Cleanup: Remove event listener when closing
+            if (lobbyController != null && lobbyController.getMultiplayerService() != null) {
+                lobbyController.getMultiplayerService().removeEventListener(this);
+                System.out.println("[CONFIG] Removed WebSocket event listener during cleanup");
+            }
+            
+            // Cancel timeout thread if still running
+            if (timeoutThread != null && timeoutThread.isAlive()) {
+                timeoutThread.interrupt();
+                System.out.println("[CONFIG] Cancelled timeout thread during cleanup");
+            }
+            
             Stage stage = (Stage) startGameButton.getScene().getWindow();
             if (stage != null) {
                 stage.close();
@@ -371,6 +396,18 @@ public class GameConfigurationController {
     
     @FXML
     private void handleBack() {
+        // Cleanup: Remove event listener when going back
+        if (lobbyController != null && lobbyController.getMultiplayerService() != null) {
+            lobbyController.getMultiplayerService().removeEventListener(this);
+            System.out.println("[CONFIG] Removed WebSocket event listener when going back");
+        }
+        
+        // Cancel timeout thread if still running
+        if (timeoutThread != null && timeoutThread.isAlive()) {
+            timeoutThread.interrupt();
+            System.out.println("[CONFIG] Cancelled timeout thread when going back");
+        }
+        
         try {
             Stage stage = (Stage) backButton.getScene().getWindow();
             
@@ -589,24 +626,24 @@ public class GameConfigurationController {
             System.out.println("[CONFIG] START_GAME message sent successfully");
             System.out.println("[CONFIG] Waiting for GAME_STARTED response from server...");
             
-            // Add a timeout mechanism to reset the button if no response
-            Platform.runLater(() -> {
-                new Thread(() -> {
-                    try {
-                        Thread.sleep(15000); // Wait 15 seconds
-                        Platform.runLater(() -> {
-                            if (startGameButton.getText().equals("Envoi en cours...")) {
-                                System.err.println("[CONFIG] Timeout waiting for GAME_STARTED - resetting button");
-                                startGameButton.setText("Confirmer et Démarrer");
-                                startGameButton.setDisable(false);
-                                showError("Timeout", "Le serveur ne répond pas. Veuillez réessayer.");
-                            }
-                        });
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                }).start();
+            // Add a simple timeout mechanism with cancellation support
+            timeoutThread = new Thread(() -> {
+                try {
+                    Thread.sleep(15000); // Wait 15 seconds
+                    Platform.runLater(() -> {
+                        if (startGameButton.getText().equals("Envoi en cours...")) {
+                            System.err.println("[CONFIG] Timeout waiting for GAME_STARTED - resetting button");
+                            startGameButton.setText("Confirmer et Démarrer");
+                            startGameButton.setDisable(false);
+                            showError("Timeout", "Le serveur ne répond pas. Veuillez réessayer.");
+                        }
+                    });
+                } catch (InterruptedException e) {
+                    // Thread interrupted - probably because game started
+                    System.out.println("[CONFIG] Timeout thread interrupted - game started successfully");
+                }
             });
+            timeoutThread.start();
             
             // Don't close window immediately - wait for GAME_STARTED event
             // The MultiplayerLobbyController will handle the transition when GAME_STARTED is received
@@ -641,5 +678,76 @@ public class GameConfigurationController {
         } catch (NumberFormatException e) {
             return 60; // Default to 60 seconds
         }
+    }
+
+    // ==========================
+    // MultiplayerEventListener Implementation
+    // ==========================
+    
+    @Override
+    public void onPlayerJoined(String playerName) {
+        // Not needed for configuration screen
+    }
+
+    @Override
+    public void onGameStarted(String letter, List<String> categories, int duration) {
+        System.out.println("[CONFIG] *** GAME_STARTED event received by host! ***");
+        System.out.println("[CONFIG] Letter: " + letter + ", Categories: " + categories.size() + ", Duration: " + duration + "s");
+        
+        // Cancel timeout thread
+        if (timeoutThread != null && timeoutThread.isAlive()) {
+            System.out.println("[CONFIG] Cancelling timeout thread - GAME_STARTED received successfully");
+            timeoutThread.interrupt();
+        }
+        
+        Platform.runLater(() -> {
+            try {
+                Stage stage = (Stage) startGameButton.getScene().getWindow();
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/baccalaureat/MultiplayerGame.fxml"));
+                Parent root = loader.load();
+                
+                // Configure MultiplayerGameController
+                Object controller = loader.getController();
+                if (controller instanceof MultiplayerGameController mgc) {
+                    mgc.setDarkMode(darkMode);
+                    if (lobbyController != null && lobbyController.getMultiplayerService() != null) {
+                        mgc.initializeMultiplayerGame(lobbyController.getMultiplayerService(), letter, categories, duration);
+                    }
+                }
+                
+                Scene scene = new Scene(root, 1200, 800);
+                
+                // Apply current theme
+                if (darkMode) {
+                    scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-dark.css").toExternalForm());
+                } else {
+                    scene.getStylesheets().add(getClass().getResource("/com/baccalaureat/theme-light.css").toExternalForm());
+                }
+                
+                stage.setScene(scene);
+                stage.show();
+                
+                System.out.println("[CONFIG] Successfully transitioned to multiplayer game for host");
+                
+            } catch (IOException e) {
+                System.err.println("[CONFIG] Error transitioning to game: " + e.getMessage());
+                e.printStackTrace();
+                showError("Erreur", "Erreur lors du chargement du jeu: " + e.getMessage());
+                
+                // Reset button state if transition failed
+                startGameButton.setText("Confirmer et Démarrer");
+                startGameButton.setDisable(false);
+            }
+        });
+    }
+
+    @Override
+    public void onRoundEnded() {
+        // Not needed for configuration screen
+    }
+
+    @Override
+    public void onGameEnded(com.fasterxml.jackson.databind.JsonNode leaderboard) {
+        // Not needed for configuration screen
     }
 }

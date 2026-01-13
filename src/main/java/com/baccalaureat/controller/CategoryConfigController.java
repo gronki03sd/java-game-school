@@ -101,10 +101,10 @@ public class CategoryConfigController implements Initializable {
             
             {
                 // Set minimum button sizes to ensure visibility
-                editButton.setMinWidth(70);
-                editButton.setPrefWidth(70);
-                deleteButton.setMinWidth(80);
-                deleteButton.setPrefWidth(80);
+                editButton.setMinWidth(120);
+                editButton.setPrefWidth(120);
+                deleteButton.setMinWidth(120);
+                deleteButton.setPrefWidth(120);
                 
                 editButton.getStyleClass().add("button-primary");
                 deleteButton.getStyleClass().add("button-danger");

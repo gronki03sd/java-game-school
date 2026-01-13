@@ -11,7 +11,7 @@
          <children>
             <Label styleClass="page-title" text="Category Management" />
             <Region HBox.hgrow="ALWAYS" />
-            <Button fx:id="cancelButton" mnemonicParsing="false" onAction="#onClose" styleClass="button-secondary" text="Close" prefWidth="80" />
+            <Button fx:id="cancelButton" mnemonicParsing="false" onAction="#onClose" styleClass="button-secondary" text="Close" prefWidth="120" />
          </children>
          <padding>
             <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
@@ -55,8 +55,8 @@
                      
                      <HBox alignment="CENTER_LEFT" spacing="10.0">
                         <children>
-                           <Button fx:id="addButton" mnemonicParsing="false" onAction="#onAddCategory" styleClass="button-primary" text="Add" prefWidth="80" />
-                           <Button mnemonicParsing="false" onAction="#onCancel" styleClass="button-secondary" text="Clear" prefWidth="80" />
+                           <Button fx:id="addButton" mnemonicParsing="false" onAction="#onAddCategory" styleClass="button-primary" text="Add" prefWidth="120" />
+                           <Button mnemonicParsing="false" onAction="#onCancel" styleClass="button-secondary" text="Clear" prefWidth="120" />
                            <Region HBox.hgrow="ALWAYS" />
                            <Label fx:id="statusLabel" visible="false" />
                         </children>
@@ -77,7 +77,7 @@
                            <TableColumn fx:id="displayNameColumn" minWidth="150.0" prefWidth="200.0" text="Display Name" />
                            <TableColumn fx:id="iconColumn" maxWidth="60.0" minWidth="60.0" prefWidth="60.0" text="Icon" />
                            <TableColumn fx:id="enabledColumn" maxWidth="80.0" minWidth="80.0" prefWidth="80.0" text="Enabled" />
-                           <TableColumn fx:id="actionsColumn" minWidth="180.0" prefWidth="180.0" sortable="false" text="Actions" />
+                           <TableColumn fx:id="actionsColumn" minWidth="300.0" prefWidth="300.0" sortable="false" text="Actions" />
                         </columns>
                      </TableView>
                   </children>
